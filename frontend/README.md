@@ -1,4 +1,4 @@
-# Martian Survival Guide — Frontend
+# Red-Rock — Frontend
 
 An immersive 3D Mars exploration and safety-planning interface built with React, TypeScript, Three.js, React Three Fiber, and Vite.
 

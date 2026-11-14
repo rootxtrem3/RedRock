@@ -1,0 +1,155 @@
+{
+  "projection": "simple cylindrical / planetocentric / east-positive",
+  "longitudeTextureRange": "-180 to 180",
+  "elevationRangeMeters": [
+    -8177,
+    21171
+  ],
+  "downloadBudgetBytes": 5368709120,
+  "plannedSourceBytes": 1158583420,
+  "global": {
+    "texture": "/terrain/global/viking-global.webp",
+    "height": "/terrain/global/mola-height.png",
+    "textureDimensions": [
+      8192,
+      4096
+    ],
+    "heightDimensions": [
+      4096,
+      2048
+    ],
+    "textureResolutionMeters": 920,
+    "heightResolutionMeters": 3705,
+    "sources": [
+      "NASA Viking Orbiter merged color mosaic / ASU",
+      "NASA MGS MOLA MEGDR v2.0 / PDS Geosciences Node"
+    ]
+  },
+  "patches": {
+    "jezero": {
+      "id": "jezero",
+      "bounds": {
+        "north": 21.3,
+        "south": 15.3,
+        "west": 74.45,
+        "east": 80.45
+      },
+      "texture": "/terrain/patches/jezero/themis.webp",
+      "height": "/terrain/patches/jezero/mola-height.png",
+      "imageryResolutionMeters": 231.55,
+      "elevationResolutionMeters": 463.1,
+      "textureDimensions": [
+        1536,
+        1536
+      ],
+      "heightDimensions": [
+        768,
+        768
+      ],
+      "sources": [
+        "NASA Mars Odyssey / THEMIS Day IR Global Mosaic v2.0",
+        "NASA MGS / MOLA MEGDR v2.0"
+      ]
+    },
+    "gale": {
+      "id": "gale",
+      "bounds": {
+        "north": -2.4000000000000004,
+        "south": -8.4,
+        "west": 134.8,
+        "east": 140.8
+      },
+      "texture": "/terrain/patches/gale/themis.webp",
+      "height": "/terrain/patches/gale/mola-height.png",
+      "imageryResolutionMeters": 231.55,
+      "elevationResolutionMeters": 463.1,
+      "textureDimensions": [
+        1536,
+        1536
+      ],
+      "heightDimensions": [
+        768,
+        768
+      ],
+      "sources": [
+        "NASA Mars Odyssey / THEMIS Day IR Global Mosaic v2.0",
+        "NASA MGS / MOLA MEGDR v2.0"
+      ]
+    },
+    "elysium": {
+      "id": "elysium",
+      "bounds": {
+        "north": 7.5,
+        "south": 1.5,
+        "west": 132.9,
+        "east": 138.9
+      },
+      "texture": "/terrain/patches/elysium/themis.webp",
+      "height": "/terrain/patches/elysium/mola-height.png",
+      "imageryResolutionMeters": 231.55,
+      "elevationResolutionMeters": 463.1,
+      "textureDimensions": [
+        1536,
+        1536
+      ],
+      "heightDimensions": [
+        768,
+        768
+      ],
+      "sources": [
+        "NASA Mars Odyssey / THEMIS Day IR Global Mosaic v2.0",
+        "NASA MGS / MOLA MEGDR v2.0"
+      ]
+    },
+    "olympus": {
+      "id": "olympus",
+      "bounds": {
+        "north": 21.65,
+        "south": 15.649999999999999,
+        "west": -136.8,
+        "east": -130.8
+      },
+      "texture": "/terrain/patches/olympus/themis.webp",
+      "height": "/terrain/patches/olympus/mola-height.png",
+      "imageryResolutionMeters": 231.55,
+      "elevationResolutionMeters": 463.1,
+      "textureDimensions": [
+        1536,
+        1536
+      ],
+      "heightDimensions": [
+        768,
+        768
+      ],
+      "sources": [
+        "NASA Mars Odyssey / THEMIS Day IR Global Mosaic v2.0",
+        "NASA MGS / MOLA MEGDR v2.0"
+      ]
+    },
+    "valles": {
+      "id": "valles",
+      "bounds": {
+        "north": -11.0,
+        "south": -17.0,
+        "west": -73.0,
+        "east": -67.0
+      },
+      "texture": "/terrain/patches/valles/themis.webp",
+      "height": "/terrain/patches/valles/mola-height.png",
+      "imageryResolutionMeters": 231.55,
+      "elevationResolutionMeters": 463.1,
+      "textureDimensions": [
+        1536,
+        1536
+      ],
+      "heightDimensions": [
+        768,
+        768
+      ],
+      "sources": [
+        "NASA Mars Odyssey / THEMIS Day IR Global Mosaic v2.0",
+        "NASA MGS / MOLA MEGDR v2.0"
+      ]
+    }
+  }
+}
