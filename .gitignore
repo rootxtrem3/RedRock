@@ -1,0 +1,6 @@
+# Downloaded planetary source products are reproducible with the preparation script.
+data/mars/raw/
+
+# Python tooling
+__pycache__/
+*.pyc
