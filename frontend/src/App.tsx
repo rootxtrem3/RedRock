@@ -303,7 +303,7 @@ function App() {
         >
           <img
             className="brand-mark"
-            src="/icon/red-rock-brand.png"
+            src="/icon/red-rock-newer.png"
             alt=""
             aria-hidden="true"
           />
