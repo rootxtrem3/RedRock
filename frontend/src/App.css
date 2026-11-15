@@ -118,7 +118,7 @@
 }
 
 .brand {
-  width: 214px;
+  width: 300px;
   min-height: 48px;
   display: flex;
   align-items: center;
@@ -131,9 +131,9 @@
 }
 
 .brand-mark {
-  width: 150px;
+  width: 105px;
   height: 62px;
-  flex: 0 0 150px;
+  flex: 0 0 105px;
   object-fit: contain;
   object-position: center;
 }
@@ -1429,8 +1429,8 @@
 
 @media (max-width: 900px) {
   .desktop-nav { display: none; }
-  .brand { width: 184px; }
-  .brand-mark { width: 150px; height: 60px; flex-basis: 150px; }
+  .brand { width: 250px; }
+  .brand-mark { width: 86px; height: 58px; flex-basis: 86px; }
   .search-navigator { width: min(47vw, 330px); }
   .orbital-data-widget { width: 260px; }
   .quick-layers { grid-template-columns: repeat(2, 1fr); }
@@ -1441,8 +1441,10 @@
   .screen-vignette { box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.72); }
   .top-navigation { top: 8px; right: 8px; left: 8px; height: 57px; padding: 0 7px 0 10px; }
   .top-navigation::after { width: 49px; }
-  .brand { width: 150px; gap: 0; }
-  .brand-mark { width: 142px; height: 55px; flex-basis: 142px; }
+  .brand { width: 180px; gap: 7px; }
+  .brand-mark { width: 67px; height: 48px; flex-basis: 67px; }
+  .brand-copy strong { font-size: 12px; letter-spacing: 0.08em; }
+  .brand-copy small { font-size: 9px; letter-spacing: 0.08em; }
   .nav-operations { flex: 1; justify-content: flex-end; }
   .search-navigator { width: min(61vw, 260px); height: 40px; }
   .search-navigator input { font-size: 10px; }
@@ -1520,9 +1522,11 @@
 }
 
 @media (max-width: 430px) {
-  .brand { width: 112px; }
-  .brand-mark { width: 106px; height: 51px; flex-basis: 106px; }
-  .search-navigator { width: calc(100vw - 144px); }
+  .brand { width: 145px; gap: 5px; }
+  .brand-mark { width: 54px; height: 42px; flex-basis: 54px; }
+  .brand-copy strong { font-size: 10px; letter-spacing: 0.05em; }
+  .brand-copy small { display: none; }
+  .search-navigator { width: calc(100vw - 194px); }
   .location-title-row h2 { font-size: 22px; }
   .panel-actions { grid-template-columns: 1fr 0.9fr; }
   .environment-grid article strong { font-size: 11px; }
