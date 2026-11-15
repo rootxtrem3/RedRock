@@ -1022,8 +1022,10 @@
 
 .guide-index button { min-height: 31px; flex: 0 0 auto; padding: 0 8px; color: #827b75; background: transparent; border: 0; font-size: 7px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
 .guide-index button:hover { color: var(--faded-white); }
+.guide-index button[aria-selected="true"] { color: var(--faded-white); box-shadow: inset 0 -2px var(--mars-red-light); }
 
 .guide-section { padding: 20px 19px; border-bottom: 1px solid var(--border-soft); scroll-margin-top: 8px; }
+.guide-section[hidden] { display: none; }
 .guide-section-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
 .guide-section-heading > span { width: 27px; height: 27px; display: grid; place-items: center; color: var(--mars-red-light); border: 1px solid rgba(169, 71, 50, 0.42); font-family: var(--mono); font-size: 8px; }
 .guide-section-heading div { display: flex; flex-direction: column; }
@@ -1038,6 +1040,28 @@
 .environment-grid .environment-primary { min-height: 92px; grid-column: 1 / -1; grid-template-columns: 30px 1fr; }
 .environment-grid .environment-primary strong { font-size: 28px; letter-spacing: -0.04em; }
 .data-caveat { margin: 10px 0 0; color: #77716b; font-size: 8px; line-height: 1.5; }
+
+.thermal-estimate { display: grid; gap: 10px; margin-top: 12px; padding: 12px; background: rgba(232, 226, 216, 0.025); border: 1px solid var(--border-soft); }
+.thermal-estimate-heading { display: flex; justify-content: space-between; align-items: center; color: var(--mars-red-light); }
+.thermal-estimate-heading div { display: grid; gap: 4px; }
+.thermal-estimate-heading span { color: #77716b; font-size: 7px; font-weight: 700; letter-spacing: 0.12em; }
+.thermal-estimate-heading strong { color: var(--faded-white); font-size: 11px; }
+.thermal-estimate-input { display: grid; grid-template-columns: 1fr auto; gap: 5px 8px; color: #aaa29a; font-size: 9px; }
+.thermal-estimate-input small { color: #77716b; }
+.thermal-estimate-input input { grid-column: 1 / -1; width: 100%; min-height: 32px; padding: 0 9px; color: var(--faded-white); background: #10100f; border: 1px solid var(--border-soft); font: 10px var(--mono); }
+.thermal-estimate-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.thermal-estimate-controls label { display: grid; gap: 6px; color: #8a837c; font-size: 8px; }
+.thermal-estimate-controls input[type="range"] { width: 100%; accent-color: var(--mars-red-light); }
+.thermal-estimate-controls select { min-height: 30px; padding: 0 7px; color: var(--faded-white); background: #10100f; border: 1px solid var(--border-soft); font-size: 9px; }
+.thermal-estimate-controls small { color: var(--faded-white); font: 10px var(--mono); }
+.thermal-estimate-results { display: grid; grid-template-columns: 1fr 1.3fr; gap: 7px; }
+.thermal-estimate-results div { display: grid; gap: 5px; padding: 9px; background: rgba(169, 71, 50, 0.08); }
+.thermal-estimate-results span { color: #928980; font-size: 7px; text-transform: uppercase; }
+.thermal-estimate-results strong { color: var(--faded-white); font: 13px var(--mono); }
+.thermal-estimate-empty, .thermal-estimate-caveat { margin: 0; color: #827b75; font-size: 8px; line-height: 1.5; }
+.thermal-estimate-caveat { color: #716b65; }
+.thermal-estimate-source { width: fit-content; color: #c17b67; font-size: 8px; text-decoration: none; }
+.thermal-estimate-source:hover { color: var(--faded-white); }
 
 .hazard-summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px; background: rgba(169, 71, 50, 0.09); border-left: 2px solid var(--mars-red-light); }
 .hazard-level-mark { display: grid; grid-template-columns: 24px auto; align-items: center; }
