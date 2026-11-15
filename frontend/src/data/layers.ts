@@ -85,7 +85,7 @@ export const LAYER_DEFINITIONS: Record<LayerId, LayerDefinition> = {
     group: 'Terrain',
     note: 'MOLA · 8 ppd',
     texture: '/terrain/layers/mola-roughness.webp',
-    opacity: 0.82,
+    opacity: 1,
     source: 'MOLA vertical roughness composite / Kreslavsky & Head 2002',
     sourceUrl: 'https://www.mars.asu.edu/data/mola_roughness/',
     resolution: '8 ppd source · ~7.5 km/pixel',
@@ -105,7 +105,7 @@ export const LAYER_DEFINITIONS: Record<LayerId, LayerDefinition> = {
     group: 'Thermal',
     note: 'THEMIS · 256 ppd',
     texture: '/terrain/layers/themis-day-ir.webp',
-    opacity: 0.94,
+    opacity: 1,
     source:
       'NASA/JPL-Caltech/Arizona State University, Mars Odyssey THEMIS Day IR Global Mosaic v2.0',
     sourceUrl: 'https://www.mars.asu.edu/data/thm_dir/',
@@ -135,7 +135,7 @@ export const LAYER_DEFINITIONS: Record<LayerId, LayerDefinition> = {
     group: 'Thermal',
     note: 'TES · 20 ppd',
     texture: '/terrain/layers/tes-thermal-inertia.webp',
-    opacity: 0.92,
+    opacity: 1,
     source:
       'NASA/JPL/Arizona State University, MGS TES nighttime thermal inertia (Putzig et al. 2005)',
     sourceUrl: 'https://www.mars.asu.edu/data/tes_putzigti/nighttime2005/',
@@ -157,7 +157,7 @@ export const LAYER_DEFINITIONS: Record<LayerId, LayerDefinition> = {
     group: 'Minerals',
     note: 'TES · 4 ppd',
     texture: '/terrain/layers/tes-sheet-silicates.webp',
-    opacity: 0.84,
+    opacity: 1,
     source:
       'NASA/JPL/Arizona State University, MGS TES sheet-silicate / high-silica-glass abundance (Bandfield 2002)',
     sourceUrl: 'https://www.mars.asu.edu/data/tes_silicates/',
@@ -178,7 +178,7 @@ export const LAYER_DEFINITIONS: Record<LayerId, LayerDefinition> = {
     group: 'Minerals',
     note: 'TES · 4 ppd',
     texture: '/terrain/layers/tes-hematite.webp',
-    opacity: 0.84,
+    opacity: 1,
     source:
       'NASA/JPL/Arizona State University, MGS TES hematite abundance (Bandfield 2002)',
     sourceUrl: 'https://www.mars.asu.edu/data/tes_hematite/',

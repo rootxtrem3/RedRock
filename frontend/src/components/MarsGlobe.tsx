@@ -135,9 +135,11 @@ function ScientificLayerGlobe({ layer }: { layer: LayerId }) {
 }
 
 function MarsSurface({
+  layer,
   onCoordinateSelect,
   onReady,
 }: {
+  layer: LayerId
   onCoordinateSelect: (lat: number, lon: number) => void
   onReady: () => void
 }) {
@@ -175,7 +177,12 @@ function MarsSurface({
       <mesh {...tap}>
         <sphereGeometry args={[MARS_RADIUS, 384, 192]} />
         <meshStandardMaterial
-          map={texture}
+          // Keep the Viking mosaic as the visual layer. Scientific overlays
+          // have their own color ramps; leaving the red mosaic underneath
+          // tints and obscures those measurements, especially at partial
+          // opacity and around transparent no-data pixels.
+          map={layer === 'visual' ? texture : undefined}
+          color={layer === 'visual' ? '#ffffff' : '#252321'}
           displacementMap={height}
           displacementScale={TERRAIN_DISPLACEMENT_SCALE}
           displacementBias={TERRAIN_DISPLACEMENT_BIAS}
@@ -535,6 +542,7 @@ function GlobeScene(props: MarsGlobeProps) {
       <StaticStars />
       <Suspense fallback={null}>
         <MarsSurface
+          layer={props.layer}
           onCoordinateSelect={props.onCoordinateSelect}
           onReady={props.onReady}
         />
