@@ -33,7 +33,9 @@ const PIN_BASE_HEIGHT = 0.036
 // Small bias above the supplied point; keep world-space lift tiny so pins do
 // not visibly hover when the camera is close to the surface.
 const DEFAULT_LIFT = 0.0015
-const FRONT_FACING_THRESHOLD = 0.015
+// Hide sprites before they reach the grazing-angle zone where a flat
+// camera-facing pin would visually shear across the curved planetary edge.
+const FRONT_FACING_THRESHOLD = 0.08
 const DEFAULT_POSITION: [number, number, number] = [0, 0, 0]
 
 type PinTextureCacheKey = `pin:${'selected' | 'default'}:${string}`

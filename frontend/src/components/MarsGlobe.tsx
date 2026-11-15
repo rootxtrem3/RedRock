@@ -347,6 +347,7 @@ function Marker({
       selected={selected}
       prominent={prominent}
       onTap={() => onSelect(location)}
+      depthTest={false}
     />
   )
 }
@@ -363,7 +364,7 @@ function StationMarker({
     [heightImage, station.lat, station.lon],
   )
 
-  return <MapLocationPin position={position} prominent color="#C7654C" />
+  return <MapLocationPin position={position} prominent color="#C7654C" depthTest={false} />
 }
 
 function Route({ plan }: { plan: BackendRoutePlan }) {
