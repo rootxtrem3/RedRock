@@ -244,6 +244,21 @@ export function createApp(store = new MarsDataStore()) {
       response.json({
         routeId: `${input.variant}-${Date.now()}`,
         variant: input.variant,
+        destination: prospect
+          ? {
+              type: 'swim-cell',
+              lat: destination.lat,
+              lon: destination.lon,
+              label: 'Reachable SWIM consistency cell',
+              swimCi01m: Number(prospect.ci_0_1m),
+              straightLineDistanceKm: Number(prospect.distance_km),
+            }
+          : {
+              type: 'station',
+              lat: destination.lat,
+              lon: destination.lon,
+              label: 'Configured station',
+            },
         algorithm: 'A* over MOLA elevation, slope, and local-relief grid',
         coverage: 'terrain-sampled',
         points,
@@ -253,7 +268,7 @@ export function createApp(store = new MarsDataStore()) {
         descentMeters: null,
         maximumSlopeDegrees: route.path.reduce((maximum: number, point: { slope_degrees: number | null }) => Math.max(maximum, point.slope_degrees ?? 0), 0),
         waypoints,
-        assumptions: [`Constant planning speed of ${input.travelSpeedKmPerHour} km/h; no stops or energy limits included.`, ...(prospect ? [`Destination is the highest-ranked reachable nearby SWIM consistency cell (Ci ${Number(prospect.ci_0_1m).toFixed(2)}); this does not confirm water. Ci ≥ 0.3 is the published positive-indicator threshold.`] : [])],
+        assumptions: [`Constant planning speed of ${input.travelSpeedKmPerHour} km/h; no stops or energy limits included.`, ...(prospect ? [`Destination is the highest-ranked reachable SWIM consistency cell among the sampled candidates (Ci ${Number(prospect.ci_0_1m).toFixed(2)}); this does not confirm water. ${Number(prospect.ci_0_1m) >= 0.3 ? 'It meets' : 'It is below'} the published positive-indicator threshold of Ci 0.3.`] : [])],
         caveats: [route.caveat, 'This is an exploratory terrain-cost route, not a certified safe route. MOLA grid is roughly 5.9 km/cell at the equator.'],
       })
     } catch (error) {

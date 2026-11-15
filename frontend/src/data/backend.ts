@@ -58,6 +58,14 @@ export type BackendLocationAnalysis = {
 export type BackendRoutePlan = {
   routeId: string
   variant: 'recommended' | 'shorter' | 'resource'
+  destination?: {
+    type: 'station' | 'swim-cell'
+    lat: number
+    lon: number
+    label: string
+    swimCi01m?: number
+    straightLineDistanceKm?: number
+  }
   algorithm: string
   coverage: 'terrain-sampled' | 'geometry-only' | 'unavailable'
   points: Array<{

@@ -20,12 +20,13 @@ import {
 } from '../data/marsData'
 import type { MarsLocation, Station } from '../types'
 import type { BackendLocationAnalysis, BackendRoutePlan } from '../data/backend'
+import { SeasonalSolarPanel } from './SeasonalSolarPanel'
 
 type RouteVariant = 'recommended' | 'shorter' | 'resource'
 const ROUTE_VARIANTS: Array<{ id: RouteVariant; label: string }> = [
   { id: 'recommended', label: 'Balanced' },
   { id: 'shorter', label: 'Shortest' },
-  { id: 'resource', label: 'Resource-oriented' },
+  { id: 'resource', label: 'SWIM consistency' },
 ]
 
 function formatHours(hours: number | null | undefined) {
@@ -128,14 +129,15 @@ export function SurvivalPanel({
           <div className="environment-grid">
             <article className="environment-primary">
               <Thermometer size={17} />
-              <span>Prototype catalog temperature</span>
-              <strong>{location.temperature}</strong>
+              <span>Modeled surface temperature</span>
+              <strong>{analysis?.surfaceTemperature?.currentCelsius == null ? 'Unavailable' : `${analysis.surfaceTemperature.currentCelsius.toFixed(1)}°C`}</strong>
             </article>
             <article><Gauge size={16} /><span>Pressure</span><strong>{analysis?.surfacePressurePa?.value == null ? 'Unavailable' : `${analysis.surfacePressurePa.value.toLocaleString()} ${analysis.surfacePressurePa.unit ?? 'Pa'}`}</strong></article>
             <article><Navigation size={16} /><span>Gravity</span><strong>3.71 m/s²</strong></article>
             <article><Sun size={16} /><span>Solar flux</span><strong>{analysis?.solarFlux?.value == null ? 'Unavailable' : `${analysis.solarFlux.value.toLocaleString()} ${analysis.solarFlux.unit ?? 'W/m²'}`}</strong></article>
             <article><Wind size={16} /><span>Dust opacity</span><strong>{analysis?.dustOpacity?.value == null ? 'Unavailable' : `${analysis.dustOpacity.value} ${analysis.dustOpacity.unit ?? ''}`}</strong></article>
           </div>
+          <SeasonalSolarPanel location={location} />
           <ThermalEstimate analysis={analysis} loading={analysisLoading} />
           <p className="data-caveat">Orbital and mission observations. Conditions vary by season and local solar time.</p>
         </section>
@@ -195,7 +197,7 @@ export function SurvivalPanel({
 
         <section className="guide-section" id="guide-travel" role="tabpanel" aria-labelledby="guide-tab-travel" hidden={activeTab !== 'Travel'}>
           <div className="guide-section-heading">
-            <span>04</span><div><small>Surface mobility</small><h4>Travel & shelter</h4></div>
+            <span>04</span><div><small>Surface mobility</small><h4>{routeVariant === 'resource' ? 'Prospect route' : 'Travel & shelter'}</h4></div>
           </div>
           <div className="travel-advice-grid">
             <article><Route size={17} /><strong>Traverse</strong><p>Avoid abrupt elevation changes and exposed sediment margins.</p></article>
@@ -227,21 +229,37 @@ export function SurvivalPanel({
           </div>
           <div className="emergency-callout">
             <TriangleAlert size={19} />
-            <div><strong>If mobility is lost</strong><p>Follow verified backend waypoint guidance when available. Until then, use established mission contingency procedures; this prototype does not identify validated refuge points.</p></div>
+            <div><strong>If mobility is lost</strong><p>Use established mission contingency procedures. Route waypoints here are exploratory map outputs, not verified navigation instructions, and this prototype does not identify validated refuge points.</p></div>
           </div>
         </section>
 
         {activeTab === 'Travel' && <section className="guide-section return-section" id="guide-return">
           <div className="guide-section-heading">
-            <span>07</span><div><small>Safety-first navigation</small><h4>Return to station</h4></div>
+            <span>07</span><div><small>Exploratory route planning</small><h4>{routeVariant === 'resource' ? 'Route to a SWIM consistency cell' : 'Route to station'}</h4></div>
           </div>
 
           <div className="route-endpoints">
             <div><span>Current</span><strong>{location.name}</strong><small>{formatLatitude(location.lat)} · {formatLongitude(location.lon)}</small></div>
             <div className="route-connector"><i /><ChevronRight size={15} /><i /></div>
-            <button type="button" onClick={onChooseStation}>
-              <span>Destination <em>Change</em></span><strong>{station.name}</strong><small>{formatLatitude(station.lat)} · {formatLongitude(station.lon)}</small>
-            </button>
+            {(routePlan?.variant === 'resource' && routePlan.destination?.type === 'swim-cell') ? (
+              <div className="route-destination">
+                <span>Destination</span>
+                <strong>SWIM consistency cell</strong>
+                <small>{formatLatitude(routePlan.destination.lat)} · {formatLongitude(routePlan.destination.lon)}</small>
+                {routePlan.destination.swimCi01m != null && <small>Consistency index {routePlan.destination.swimCi01m.toFixed(2)} · {routePlan.destination.swimCi01m >= 0.3 ? 'positive indicator, not confirmed water' : 'below 0.3 positive-indicator threshold'}</small>}
+                {routePlan.destination.straightLineDistanceKm != null && <small>{routePlan.destination.straightLineDistanceKm.toFixed(1)} km straight-line from start</small>}
+              </div>
+            ) : routeVariant === 'resource' ? (
+              <div className="route-destination">
+                <span>Destination</span>
+                <strong>Nearby SWIM consistency cell</strong>
+                <small>Route target is selected from reachable cells; it may be below the positive-indicator threshold.</small>
+              </div>
+            ) : (
+              <button type="button" onClick={onChooseStation}>
+                <span>Destination <em>Change</em></span><strong>{station.name}</strong><small>{formatLatitude(station.lat)} · {formatLongitude(station.lon)}</small>
+              </button>
+            )}
           </div>
 
           {routeBusy ? (
@@ -249,7 +267,7 @@ export function SurvivalPanel({
           ) : !routeVisible || !routePlan ? (
             <>
               {routeError && <p className="thermal-estimate-empty" role="alert">Route unavailable: {routeError}</p>}
-            <button type="button" className="primary-action wide calculate-route" onClick={onCalculateRoute}>
+            <button type="button" className="primary-action wide calculate-route" onClick={() => onCalculateRoute()}>
               <Navigation size={16} /> Request route plan
             </button>
             </>

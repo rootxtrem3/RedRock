@@ -4,12 +4,22 @@ An immersive 3D Mars exploration and safety-planning interface built with React,
 
 ## Run locally
 
+Start the API in one terminal:
+
+```bash
+cd ../backend
+npm ci
+npm run dev
+```
+
+Then start the frontend in a second terminal:
+
 ```bash
 npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite.
+Open the local URL printed by Vite. Its `/api` requests are proxied to `http://127.0.0.1:8000` by default, including when Vite selects a different frontend port. Set `RED_ROCK_API_PROXY_TARGET` if the API listens elsewhere. For a separately hosted API, set `VITE_API_BASE_URL` to its origin and configure that API's CORS allowlist.
 
 ## Validation
 
@@ -46,4 +56,4 @@ Regenerate the base assets with `python scripts/prepare_mars_terrain.py` and `py
 
 ## Backend integration
 
-The frontend API contract, component map, raster coverage, and integration notes are documented in [`BACKEND_HANDOFF.md`](./BACKEND_HANDOFF.md). Set `VITE_API_BASE_URL` when the API is hosted on a different origin. Route plans and temperature estimates are supplied by the backend; the frontend displays them with provenance and unavailable states.
+The frontend API contract, component map, raster coverage, and integration notes are documented in [`BACKEND_HANDOFF.md`](./BACKEND_HANDOFF.md). Route plans and science values come from the backend; values the prepared datasets cannot support remain explicitly unavailable.

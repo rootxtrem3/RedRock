@@ -105,20 +105,20 @@ export function LocationPanel({
         <section className="panel-section">
           <div className="section-label"><span>02</span> Terrain</div>
           <DataRow label={analysis?.elevationMeters?.value == null ? 'Elevation (catalog)' : 'Elevation'} value={analysis?.elevationMeters?.value == null ? location.elevation : `${analysis.elevationMeters.value.toLocaleString()} ${analysis.elevationMeters.unit ?? 'm'}`} />
-          <DataRow label="Roughness" value={location.roughness} />
+          <DataRow label="Roughness (catalog)" value={location.roughness} />
           <DataRow label={analysis?.thermalInertia?.value == null ? 'Thermal inertia (catalog)' : 'Thermal inertia'} value={analysis?.thermalInertia?.value == null ? location.thermalInertia : `${analysis.thermalInertia.value} ${analysis.thermalInertia.unit ?? 'J m⁻² K⁻¹ s⁻½'}`} />
           <DataRow label="Slope" value={analysis?.slopeDegrees?.value == null ? 'Unavailable' : `${analysis.slopeDegrees.value.toFixed(1)}°`} />
           <DataRow label="Local relief" value={analysis?.localReliefMeters?.value == null ? 'Unavailable' : `${analysis.localReliefMeters.value.toFixed(0)} ${analysis.localReliefMeters.unit ?? 'm'}`} />
-          <DataRow label="Surface class" value={location.surface} />
+          <DataRow label="Surface class (catalog)" value={location.surface} />
         </section>
 
         <section className="panel-section">
           <div className="section-label"><span>03</span> Environment</div>
           <DataRow label="Surface temperature estimate" value={analysis?.surfaceTemperature?.currentCelsius == null ? (analysisLoading ? 'Loading backend data' : 'Unavailable') : `${analysis.surfaceTemperature.currentCelsius.toFixed(1)}°C`} />
-          <DataRow label="Dust" value={location.dust} />
-          <DataRow label="Solar flux" value={analysis?.solarFlux?.value == null ? location.solar : `${analysis.solarFlux.value.toLocaleString()} ${analysis.solarFlux.unit ?? 'W/m²'}`} />
+          <DataRow label="Dust level (catalog)" value={location.dust} />
+          <DataRow label={analysis?.solarFlux?.value == null ? 'Solar potential (catalog)' : 'Solar flux'} value={analysis?.solarFlux?.value == null ? location.solar : `${analysis.solarFlux.value.toLocaleString()} ${analysis.solarFlux.unit ?? 'W/m²'}`} />
           <DataRow label={analysis?.surfacePressurePa?.value == null ? 'Pressure (catalog)' : 'Pressure'} value={analysis?.surfacePressurePa?.value == null ? location.pressure : `${analysis.surfacePressurePa.value.toLocaleString()} ${analysis.surfacePressurePa.unit ?? 'Pa'}`} />
-          <DataRow label="Dust opacity" value={analysis?.dustOpacity?.value == null ? 'Unavailable' : `${analysis.dustOpacity.value} ${analysis.dustOpacity.unit ?? ''}`} />
+          <DataRow label="Dust opacity estimate" value={analysis?.dustOpacity?.value == null ? 'Unavailable' : `${analysis.dustOpacity.value} ${analysis.dustOpacity.unit ?? ''}`} />
           <DataRow label="Radiation" value={analysis?.radiation?.value == null ? 'Unavailable' : `${analysis.radiation.value} ${analysis.radiation.unit ?? ''}`} />
         </section>
 
