@@ -348,7 +348,6 @@ function App() {
         <LocationPanel
           location={selected}
           analysis={locationAnalysis}
-          analysisLoading={analysisLoading}
           expanded={detailExpanded}
           onExpand={() => setDetailExpanded(true)}
           onCollapse={() => setDetailExpanded(false)}

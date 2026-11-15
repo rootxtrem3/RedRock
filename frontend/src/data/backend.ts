@@ -24,6 +24,7 @@ export type BackendLocationAnalysis = {
   elevationMeters?: BackendValue<number>
   slopeDegrees?: BackendValue<number>
   localReliefMeters?: BackendValue<number>
+  iceConsistency01m?: BackendValue<number>
   thermalInertia?: BackendValue<number>
   surfacePressurePa?: BackendValue<number>
   dustOpacity?: BackendValue<number>

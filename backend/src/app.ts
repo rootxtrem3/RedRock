@@ -180,6 +180,10 @@ export function createApp(store = new MarsDataStore()) {
       elevationMeters: datasetValue('mola_elevation', elevation),
       slopeDegrees: datasetValue('mola_slope', slope),
       localReliefMeters: datasetValue('mola_local_relief', relief),
+      iceConsistency01m: {
+        ...datasetValue('swim_ci_0_1m', { value: ice, unit: store.metadata.get('swim_ci_0_1m')?.units ?? 'dimensionless consistency index' }),
+        confidence: ice === null ? 'unknown' : 'low',
+      },
       thermalInertia: { value: null, unit: 'J m⁻² K⁻¹ s⁻½', evidenceKind: 'unavailable', coverage: 'none', confidence: 'unknown', caveat: 'A numeric thermal-inertia raster is not included in the prepared backend grid.' },
       surfaceTemperature: null,
       surfacePressurePa: { value: null, unit: 'Pa', evidenceKind: 'unavailable', coverage: 'none', confidence: 'unknown', caveat: 'No validated pressure grid is included.' },

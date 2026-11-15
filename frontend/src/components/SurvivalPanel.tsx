@@ -9,7 +9,6 @@ import {
   Route,
   Shield,
   Sun,
-  Thermometer,
   TriangleAlert,
   Wind,
 } from 'lucide-react'
@@ -21,6 +20,7 @@ import {
 import type { MarsLocation, Station } from '../types'
 import type { BackendLocationAnalysis, BackendRoutePlan } from '../data/backend'
 import { SeasonalSolarPanel } from './SeasonalSolarPanel'
+import { useThemisPixelSample } from '../data/themisSample'
 
 type RouteVariant = 'recommended' | 'shorter' | 'resource'
 const ROUTE_VARIANTS: Array<{ id: RouteVariant; label: string }> = [
@@ -72,6 +72,7 @@ export function SurvivalPanel({
   onSources,
 }: SurvivalPanelProps) {
   const [activeTab, setActiveTab] = useState<GuideTab>('Environment')
+  const themisSample = useThemisPixelSample(location.lat, location.lon)
   const hazards = analysis?.hazards !== undefined
     ? analysis.hazards.map((hazard) => ({
         name: hazard.name,
@@ -128,18 +129,18 @@ export function SurvivalPanel({
           </div>
           <div className="environment-grid">
             <article className="environment-primary">
-              <Thermometer size={17} />
-              <span>Modeled surface temperature</span>
-              <strong>{analysis?.surfaceTemperature?.currentCelsius == null ? 'Unavailable' : `${analysis.surfaceTemperature.currentCelsius.toFixed(1)}°C`}</strong>
+              <Sun size={17} />
+              <span>THEMIS Day IR pixel</span>
+              <strong>{themisSample === undefined ? 'Loading…' : themisSample.kind === 'no-coverage' ? 'No coverage' : themisSample.kind === 'load-error' ? 'Image failed to load' : `RGB ${themisSample.rgb.join(' / ')}`}</strong>
             </article>
-            <article><Gauge size={16} /><span>Pressure</span><strong>{analysis?.surfacePressurePa?.value == null ? 'Unavailable' : `${analysis.surfacePressurePa.value.toLocaleString()} ${analysis.surfacePressurePa.unit ?? 'Pa'}`}</strong></article>
+            <article><Gauge size={16} /><span>MOLA slope</span><strong>{analysis?.slopeDegrees?.value == null ? 'No coverage' : `${analysis.slopeDegrees.value.toFixed(1)}°`}</strong></article>
             <article><Navigation size={16} /><span>Gravity</span><strong>3.71 m/s²</strong></article>
-            <article><Sun size={16} /><span>Solar flux</span><strong>{analysis?.solarFlux?.value == null ? 'Unavailable' : `${analysis.solarFlux.value.toLocaleString()} ${analysis.solarFlux.unit ?? 'W/m²'}`}</strong></article>
-            <article><Wind size={16} /><span>Dust opacity</span><strong>{analysis?.dustOpacity?.value == null ? 'Unavailable' : `${analysis.dustOpacity.value} ${analysis.dustOpacity.unit ?? ''}`}</strong></article>
+            <article><Sun size={16} /><span>Seasonal solar flux</span><strong>See MCD samples below</strong></article>
+            <article><Wind size={16} /><span>SWIM consistency · 0–1 m</span><strong>{analysis?.iceConsistency01m?.value == null ? 'No coverage' : `Ci ${analysis.iceConsistency01m.value.toFixed(3)}`}</strong></article>
           </div>
           <SeasonalSolarPanel location={location} />
-          <ThermalEstimate analysis={analysis} loading={analysisLoading} />
-          <p className="data-caveat">Orbital and mission observations. Conditions vary by season and local solar time.</p>
+          <ThemisObservation sample={themisSample} />
+          <p className="data-caveat">MOLA slope is a coarse global indicator, SWIM Ci is an ice-consistency index rather than water certainty, and THEMIS pixels are colorized brightness—not temperature. MCD solar flux is modeled at local noon.</p>
         </section>
 
         <section className="guide-section" id="guide-hazards" role="tabpanel" aria-labelledby="guide-tab-hazards" hidden={activeTab !== 'Hazards'}>
@@ -303,37 +304,24 @@ export function SurvivalPanel({
   )
 }
 
-function ThermalEstimate({
-  analysis,
-  loading,
+function ThemisObservation({
+  sample,
 }: {
-  analysis: BackendLocationAnalysis | null
-  loading: boolean
+  sample: ReturnType<typeof useThemisPixelSample>
 }) {
-  const inertia = analysis?.thermalInertia
-  const estimate = analysis?.surfaceTemperature
-
   return (
-    <section className="thermal-estimate" aria-label="Backend thermal analysis">
+    <section className="thermal-estimate" aria-label="THEMIS daytime thermal-infrared observation">
       <div className="thermal-estimate-heading">
-        <div><span>BACKEND MODEL</span><strong>Thermal conditions</strong></div>
-        <Thermometer size={15} />
+        <div><span>ORBITAL OBSERVATION</span><strong>Daytime infrared at this point</strong></div>
+        <Sun size={15} />
       </div>
       <div className="thermal-estimate-results">
-        <div><span>Thermal inertia</span><strong>{inertia?.value == null ? 'Unavailable' : `${inertia.value} ${inertia.unit ?? 'J m⁻² K⁻¹ s⁻½'}`}</strong></div>
-        <div><span>Estimated at requested conditions</span><strong>{estimate?.currentCelsius == null ? 'Unavailable' : `${estimate.currentCelsius.toFixed(0)}°C`}</strong></div>
-        <div><span>Modeled range</span><strong>{estimate?.minimumCelsius == null || estimate.maximumCelsius == null ? 'Unavailable' : `${estimate.minimumCelsius.toFixed(0)}° to ${estimate.maximumCelsius.toFixed(0)}°C`}</strong></div>
+        <div><span>Sampled image pixel</span><strong>{sample === undefined ? 'Loading…' : sample.kind === 'no-coverage' ? 'No coverage' : sample.kind === 'load-error' ? 'Image failed to load' : `RGB ${sample.rgb.join(' / ')}`}</strong></div>
+        <div><span>Source resolution</span><strong>{sample?.kind === 'sample' ? sample.resolution : 'THEMIS Day IR'}</strong></div>
+        <div><span>Surface temperature</span><strong>Not inferred from image color</strong></div>
       </div>
-      {loading && <p className="thermal-estimate-empty" role="status">Requesting site thermal analysis…</p>}
-      {!loading && !estimate && <p className="thermal-estimate-empty">No backend estimate is available for this location and season.</p>}
-      {estimate && (
-        <>
-          <p className="thermal-estimate-caveat">{estimate.modelName}. Ls {estimate.seasonLsDegrees}°, local solar time {estimate.localSolarTimeHours.toFixed(1)} h. {estimate.caveat}</p>
-          {estimate.assumptions.length > 0 && <p className="thermal-estimate-caveat">Assumptions: {estimate.assumptions.join('; ')}.</p>}
-          {estimate.sourceName && estimate.sourceUrl && <a className="thermal-estimate-source" href={estimate.sourceUrl} target="_blank" rel="noreferrer">{estimate.sourceName} ↗</a>}
-        </>
-      )}
-      {!loading && analysis?.unknowns?.map((unknown) => <p className="thermal-estimate-caveat" key={unknown}>Unknown: {unknown}</p>)}
+      <p className="thermal-estimate-caveat">{sample?.kind === 'sample' ? sample.product : 'NASA/JPL-Caltech/Arizona State University THEMIS Day IR'}; daytime 12.57 µm thermal-infrared brightness mosaic. This sampled RGB is a colorized display pixel, not a calibrated temperature in °C.</p>
+      <a className="thermal-estimate-source" href="https://www.mars.asu.edu/data/thm_dir/" target="_blank" rel="noreferrer">THEMIS Day IR source ↗</a>
     </section>
   )
 }

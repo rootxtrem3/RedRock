@@ -96,6 +96,8 @@ test('frontend analysis and route contracts return sampled values and computed p
     assert.equal(analysis.locationId, 'jezero')
     assert.equal(analysis.elevationMeters.evidenceKind, 'published-map')
     assert.equal(typeof analysis.elevationMeters.value, 'number')
+    assert.equal(typeof analysis.iceConsistency01m.value, 'number')
+    assert.equal(analysis.iceConsistency01m.unit, 'dimensionless consistency index')
     assert.equal(analysis.radiation.value, null)
     assert.equal(analysis.radiation.evidenceKind, 'unavailable')
     assert.ok(analysis.resources.length > 0)

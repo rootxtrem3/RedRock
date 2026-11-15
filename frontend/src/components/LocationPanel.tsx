@@ -2,11 +2,11 @@ import { ArrowLeft, ArrowRight, Database, Shield, X } from 'lucide-react'
 import { formatLatitude, formatLongitude } from '../data/marsData'
 import type { MarsLocation } from '../types'
 import type { BackendLocationAnalysis } from '../data/backend'
+import { useThemisPixelSample } from '../data/themisSample'
 
 type LocationPanelProps = {
   location: MarsLocation
   analysis: BackendLocationAnalysis | null
-  analysisLoading: boolean
   expanded: boolean
   onExpand: () => void
   onCollapse: () => void
@@ -29,7 +29,6 @@ function DataRow({ label, value }: { label: string; value: string }) {
 export function LocationPanel({
   location,
   analysis,
-  analysisLoading,
   expanded,
   onExpand,
   onCollapse,
@@ -37,6 +36,14 @@ export function LocationPanel({
   onSurvival,
   onSources,
 }: LocationPanelProps) {
+  const themisSample = useThemisPixelSample(location.lat, location.lon)
+  const themisValue = themisSample === undefined
+    ? 'Loading orbital pixel'
+    : themisSample.kind === 'no-coverage'
+      ? 'No THEMIS coverage at this point'
+      : themisSample.kind === 'load-error'
+        ? 'THEMIS image failed to load'
+      : `RGB ${themisSample.rgb.join(' / ')}`
   if (!expanded) {
     return (
       <aside className="floating-panel location-card panel-enter" aria-label="Selected location">
@@ -59,7 +66,7 @@ export function LocationPanel({
         <div className="location-summary-grid">
           <DataRow label={analysis?.elevationMeters?.value == null ? 'Elevation (catalog)' : 'Elevation'} value={analysis?.elevationMeters?.value == null ? location.elevation : `${analysis.elevationMeters.value.toLocaleString()} ${analysis.elevationMeters.unit ?? 'm'}`} />
           <DataRow label="Terrain" value={location.terrain} />
-          <DataRow label="Temperature estimate" value={analysis?.surfaceTemperature?.currentCelsius == null ? (analysisLoading ? 'Loading backend data' : 'Unavailable') : `${analysis.surfaceTemperature.currentCelsius.toFixed(1)}°C`} />
+          <DataRow label="THEMIS Day IR pixel" value={themisValue} />
           <DataRow label="Surface" value={location.surface} />
         </div>
         <div className="panel-actions">
@@ -114,12 +121,13 @@ export function LocationPanel({
 
         <section className="panel-section">
           <div className="section-label"><span>03</span> Environment</div>
-          <DataRow label="Surface temperature estimate" value={analysis?.surfaceTemperature?.currentCelsius == null ? (analysisLoading ? 'Loading backend data' : 'Unavailable') : `${analysis.surfaceTemperature.currentCelsius.toFixed(1)}°C`} />
+          <DataRow label="THEMIS Day IR pixel" value={themisValue} />
           <DataRow label="Dust level (catalog)" value={location.dust} />
           <DataRow label={analysis?.solarFlux?.value == null ? 'Solar potential (catalog)' : 'Solar flux'} value={analysis?.solarFlux?.value == null ? location.solar : `${analysis.solarFlux.value.toLocaleString()} ${analysis.solarFlux.unit ?? 'W/m²'}`} />
           <DataRow label={analysis?.surfacePressurePa?.value == null ? 'Pressure (catalog)' : 'Pressure'} value={analysis?.surfacePressurePa?.value == null ? location.pressure : `${analysis.surfacePressurePa.value.toLocaleString()} ${analysis.surfacePressurePa.unit ?? 'Pa'}`} />
-          <DataRow label="Dust opacity estimate" value={analysis?.dustOpacity?.value == null ? 'Unavailable' : `${analysis.dustOpacity.value} ${analysis.dustOpacity.unit ?? ''}`} />
-          <DataRow label="Radiation" value={analysis?.radiation?.value == null ? 'Unavailable' : `${analysis.radiation.value} ${analysis.radiation.unit ?? ''}`} />
+          <DataRow label="Dust opacity" value={analysis?.dustOpacity?.value == null ? 'No global map in this bundle' : `${analysis.dustOpacity.value} ${analysis.dustOpacity.unit ?? ''}`} />
+          <DataRow label="Radiation exposure" value={analysis?.radiation?.value == null ? location.id === 'gale' ? 'Curiosity RAD is site reference only' : 'No global map in this bundle' : `${analysis.radiation.value} ${analysis.radiation.unit ?? ''}`} />
+          {themisSample?.kind === 'sample' && <p className="data-caveat">Sampled from {themisSample.product} · {themisSample.resolution}. RGB is the colorized image pixel, not a temperature measurement.</p>}
         </section>
 
         <section className="panel-section">
