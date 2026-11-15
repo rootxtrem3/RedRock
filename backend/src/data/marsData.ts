@@ -3,7 +3,10 @@ import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { NpyGrid, type NpyKind } from './npyGrid.js'
 
-const sourceDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '../../../data/mars/processed')
+const sourceDirectoryCandidates = [
+  resolve(process.cwd(), 'data/mars/processed'),
+  resolve(dirname(fileURLToPath(import.meta.url)), '../../../data/mars/processed'),
+]
 
 export type DatasetMetadata = {
   id: string
@@ -46,7 +49,7 @@ export class MarsDataStore {
   readonly grids: Record<string, NpyGrid>
   readonly metadata: Map<string, DatasetMetadata>
 
-  constructor(directory = process.env.RED_ROCK_DATA_DIR ?? sourceDirectory) {
+  constructor(directory = process.env.RED_ROCK_DATA_DIR ?? sourceDirectoryCandidates.find((candidate) => existsSync(resolve(candidate, 'manifest.json'))) ?? sourceDirectoryCandidates[0]) {
     this.directory = directory
     for (const required of ['manifest.json', 'site_samples.json', 'seasonal_solar_mcd_v6_2.json']) {
       if (!existsSync(resolve(directory, required))) throw new Error(`Required backend data is missing: ${resolve(directory, required)}`)

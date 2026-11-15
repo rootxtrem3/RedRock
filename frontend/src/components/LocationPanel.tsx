@@ -67,7 +67,7 @@ export function LocationPanel({
           <DataRow label={analysis?.elevationMeters?.value == null ? 'Elevation (catalog)' : 'Elevation'} value={analysis?.elevationMeters?.value == null ? location.elevation : `${analysis.elevationMeters.value.toLocaleString()} ${analysis.elevationMeters.unit ?? 'm'}`} />
           <DataRow label="Terrain" value={location.terrain} />
           <DataRow label="THEMIS Day IR pixel" value={themisValue} />
-          <DataRow label="Surface" value={location.surface} />
+          <DataRow label="Surface context" value={location.surface} />
         </div>
         <div className="panel-actions">
           <button type="button" className="primary-action" onClick={onSurvival}>
@@ -113,22 +113,23 @@ export function LocationPanel({
           <div className="section-label"><span>02</span> Terrain</div>
           <DataRow label={analysis?.elevationMeters?.value == null ? 'Elevation (catalog)' : 'Elevation'} value={analysis?.elevationMeters?.value == null ? location.elevation : `${analysis.elevationMeters.value.toLocaleString()} ${analysis.elevationMeters.unit ?? 'm'}`} />
           <DataRow label={analysis?.roughnessProxy?.value == null ? 'Roughness (catalog)' : 'Topographic relief proxy'} value={analysis?.roughnessProxy?.value == null ? 'Unavailable — no validated numeric global layer' : `${analysis.roughnessProxy.value.toFixed(0)} m (coarse MOLA)`} />
-          <DataRow label="Thermal inertia" value={analysis?.thermalInertia?.value == null ? 'Unavailable — no validated numeric global layer' : `${analysis.thermalInertia.value} ${analysis.thermalInertia.unit ?? 'J m⁻² K⁻¹ s⁻½'}`} />
+          <DataRow label="Thermal inertia" value={analysis?.thermalInertia?.value == null ? 'Unavailable — numeric raster not bundled' : `${analysis.thermalInertia.value} ${analysis.thermalInertia.unit ?? 'J m⁻² K⁻¹ s⁻½'}`} />
           <DataRow label="Slope" value={analysis?.slopeDegrees?.value == null ? 'Unavailable' : `${analysis.slopeDegrees.value.toFixed(1)}°`} />
           <DataRow label="Local relief" value={analysis?.localReliefMeters?.value == null ? 'Unavailable' : `${analysis.localReliefMeters.value.toFixed(0)} ${analysis.localReliefMeters.unit ?? 'm'}`} />
           {analysis?.roughnessProxy?.caveat && <p className="data-caveat">{analysis.roughnessProxy.caveat}</p>}
-          <DataRow label="Surface class (catalog)" value={location.surface} />
+          <DataRow label="Surface context" value={location.surface} />
         </section>
 
         <section className="panel-section">
           <div className="section-label"><span>03</span> Environment</div>
           <DataRow label="THEMIS Day IR pixel" value={themisValue} />
-          <DataRow label="Dust level" value="Unavailable — no validated numeric global layer" />
-          <DataRow label={analysis?.seasonalSolarSamples?.records?.length ? 'Modeled seasonal noon solar flux' : 'Solar potential'} value={analysis?.seasonalSolarSamples?.records?.length ? analysis.seasonalSolarSamples.records.map((sample) => `${sample.season.replaceAll('_', ' ')} ${Math.round(sample.flux_horizontal_w_m2)} W/m²`).join(' · ') : analysis?.solarFlux?.value == null ? 'Unavailable — no coordinate-specific model sample' : `${analysis.solarFlux.value.toLocaleString()} ${analysis.solarFlux.unit ?? 'W/m²'}`} />
+          <DataRow label="Atmospheric dust loading" value={analysis?.dustOpacity?.value == null ? 'Unavailable — no gridded climatology bundled' : `${analysis.dustOpacity.value.toFixed(2)} optical depth`} />
+          <DataRow label={analysis?.seasonalSolarSamples?.records?.length ? 'Modeled seasonal noon solar flux' : 'Solar potential'} value={analysis?.seasonalSolarSamples?.records?.length ? analysis.seasonalSolarSamples.records.map((sample) => `${sample.season.replaceAll('_', ' ')} ${Math.round(sample.flux_horizontal_w_m2)} W/m²`).join(' · ') : analysis?.solarFlux?.value == null ? 'Unavailable — anchor samples only' : `${analysis.solarFlux.value.toLocaleString()} ${analysis.solarFlux.unit ?? 'W/m²'}`} />
           <DataRow label={analysis?.surfacePressurePa?.evidenceKind === 'modeled-estimate' ? 'Estimated surface pressure' : 'Surface pressure'} value={analysis?.surfacePressurePa?.value == null ? 'Unavailable — no estimate at this coordinate' : `${analysis.surfacePressurePa.value.toLocaleString()} ${analysis.surfacePressurePa.unit ?? 'Pa'}`} />
-          <DataRow label="Dust opacity" value={analysis?.dustOpacity?.value == null ? 'Unavailable — no validated global map' : `${analysis.dustOpacity.value} ${analysis.dustOpacity.unit ?? ''}`} />
+          <DataRow label="Atmospheric dust optical depth" value={analysis?.dustOpacity?.value == null ? 'Unavailable — no gridded climatology bundled' : `${analysis.dustOpacity.value.toFixed(2)} ${analysis.dustOpacity.unit ?? 'optical depth'}`} />
           <DataRow label="Radiation exposure" value={analysis?.radiation?.value == null ? location.id === 'gale' ? 'Unavailable globally — Curiosity RAD is a site reference' : 'Unavailable — no validated global map' : `${analysis.radiation.value} ${analysis.radiation.unit ?? ''}`} />
           {analysis?.surfacePressurePa?.caveat && <p className="data-caveat">{analysis.surfacePressurePa.caveat}</p>}
+          {analysis?.dustOpacity?.caveat && <p className="data-caveat">{analysis.dustOpacity.caveat}</p>}
           {analysis?.seasonalSolarSamples?.caveat && <p className="data-caveat">{analysis.seasonalSolarSamples.caveat}</p>}
           {themisSample?.kind === 'sample' && <p className="data-caveat">Sampled from {themisSample.product} · {themisSample.resolution}. RGB is the colorized image pixel, not a temperature measurement.</p>}
         </section>

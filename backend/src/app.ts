@@ -171,11 +171,11 @@ export function createApp(store = new MarsDataStore()) {
     const slope = sample.terrain.mola_slope
     const relief = sample.terrain.mola_local_relief
     const ice = sample.ice.ci_0_1m
-    // First-order reference-atmosphere estimate. MOLA elevation is relative to
-    // the areoid; this intentionally omits seasonal, diurnal, and weather effects.
+    // Hydrostatic reference-pressure approximation corrected for Mars' varying
+    // gravity with areoid-relative elevation; still omits seasonal GCM effects.
     const pressureEstimate = elevation.value === null
       ? null
-      : 636 * Math.exp(-elevation.value / 11_000)
+      : 636 * Math.exp(-3.71 * elevation.value / (188.92 * 210))
     const nearestSolarSite = store.siteSamples
       .map((site) => ({ site, distanceKm: distanceKm({ lat, lon_east: lon }, { lat: site.lat, lon_east: site.lon_east }) }))
       .sort((a, b) => a.distanceKm - b.distanceKm)[0]
@@ -212,12 +212,12 @@ export function createApp(store = new MarsDataStore()) {
         value: pressureEstimate === null ? null : Math.round(pressureEstimate * 10) / 10,
         unit: 'Pa',
         evidenceKind: pressureEstimate === null ? 'unavailable' : 'modeled-estimate',
-        sourceName: 'NASA Mars Fact Sheet mean surface pressure and scale height; exponential reference-atmosphere approximation',
+        sourceName: 'NASA Mars Fact Sheet mean pressure; hydrostatic CO₂ reference-atmosphere estimate',
         sourceUrl: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html',
         coverage: pressureEstimate === null ? 'none' : 'global',
         confidence: pressureEstimate === null ? 'unknown' : 'low',
-        model: { equation: 'p(z) = 636 Pa × exp(−z / 11000 m)', referenceElevationMeters: 0, scaleHeightMeters: 11000 },
-        caveat: 'Climatological first-order estimate from MOLA elevation, not a local measurement or Mars GCM output. Omits seasonal CO₂ frost exchange, dust, latitude, local time, and weather; NASA reports mean-radius pressure varies seasonally (about 400–870 Pa).',
+        model: { equation: 'p(z) = 636 Pa × exp(−g₀ z / (RCO₂ Tref)); g₀=3.71 m/s², RCO₂=188.92 J/(kg·K), Tref=210 K', referenceElevationMeters: 0, referenceTemperatureKelvin: 210 },
+        caveat: 'Improved hydrostatic reference estimate using CO₂ gas constant and reference temperature with Mars gravity. Still not an MCD/local observation; omits latitude, seasonal CO₂ exchange, dust, local time and weather. NASA gives 636 Pa at mean radius with a roughly 400–870 Pa seasonal range, so treat this as low-confidence context.',
       },
       dustOpacity: { value: null, unit: 'dimensionless', evidenceKind: 'unavailable', coverage: 'none', confidence: 'unknown', caveat: 'No validated dust-opacity grid is included.' },
       solarFlux: { value: null, unit: 'W/m²', evidenceKind: 'unavailable', coverage: 'none', confidence: 'unknown', caveat: 'The available solar model contains seasonal samples only at five named site anchors; it is not a coordinate-wide solar map.' },
@@ -234,9 +234,9 @@ export function createApp(store = new MarsDataStore()) {
       resources,
       hazards,
       unknowns: [
-        'No validated local temperature, thermal inertia, dust opacity, or radiation value is available at this coordinate.',
+        'No validated local temperature, thermal inertia, atmospheric dust loading, or radiation value is available at this coordinate.',
         ...(localSolarSamples.length ? [] : ['No coordinate-specific solar model value is available; seasonal samples exist only at the five named site anchors.']),
-        'Surface pressure is a low-confidence reference-atmosphere estimate, not a local observation.',
+        'Surface pressure is a low-confidence hydrostatic reference estimate, not an MCD result or local observation.',
       ],
       updatedAt: new Date().toISOString(),
     })

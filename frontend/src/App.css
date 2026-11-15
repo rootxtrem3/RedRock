@@ -1315,8 +1315,6 @@
 .map-controls button.is-active { color: var(--faded-white); background: rgba(169, 71, 50, 0.16); }
 .map-controls button[data-auto-rotate-toggle] { color: #c17b67; }
 .map-controls button:disabled { color: #494541; cursor: not-allowed; }
-.device-location-status { position: absolute; z-index: 10; right: 22px; bottom: 330px; max-width: 300px; padding: 9px 12px; color: var(--faded-white); background: rgba(9, 9, 9, 0.9); border: 1px solid var(--border); font-size: 12px; line-height: 1.4; }
-.guide-active .device-location-status { right: 520px; }
 
 .telemetry-bar {
   position: absolute;
@@ -1470,8 +1468,6 @@
   .viewport-reticle { width: 44px; height: 44px; }
   .map-controls { top: 77px; right: 9px !important; bottom: auto; }
   .map-controls button { width: 44px; height: 44px; }
-  .device-location-status { top: 77px; right: 62px; bottom: auto; max-width: min(260px, calc(100vw - 80px)); }
-  .guide-active .device-location-status { right: 62px; }
 
   .location-card,
   .detail-panel,

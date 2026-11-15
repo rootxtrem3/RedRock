@@ -1,0 +1,107 @@
+[
+  {
+    "id": "jezero_crater",
+    "name": "Jezero Crater",
+    "lat": 18.38,
+    "lon_east": 77.58,
+    "grid_row": 716,
+    "grid_col": 2575,
+    "mola_source_pixel": {
+      "row": 9167,
+      "col": 32970
+    },
+    "mola_elevation_m": -2645,
+    "swim_source_pixel": {
+      "row": 832,
+      "col": 5151
+    },
+    "swim_ci_0_1m": -0.25312498211860657,
+    "swim_status": "sampled_consistency_index",
+    "cell_size_equator_m": 5927.6,
+    "site_point_note": "Approximate map reference point; not a site boundary or landing recommendation."
+  },
+  {
+    "id": "olympus_mons",
+    "name": "Olympus Mons",
+    "lat": 18.65,
+    "lon_east": -133.8,
+    "grid_row": 713,
+    "grid_col": 461,
+    "mola_source_pixel": {
+      "row": 9132,
+      "col": 5913
+    },
+    "mola_elevation_m": 20012,
+    "swim_source_pixel": {
+      "row": 827,
+      "col": 923
+    },
+    "swim_ci_0_1m": -0.2174999862909317,
+    "swim_status": "sampled_consistency_index",
+    "cell_size_equator_m": 5927.6,
+    "site_point_note": "Approximate map reference point; not a site boundary or landing recommendation."
+  },
+  {
+    "id": "gale_crater",
+    "name": "Gale Crater",
+    "lat": -5.4,
+    "lon_east": 137.8,
+    "grid_row": 954,
+    "grid_col": 3178,
+    "mola_source_pixel": {
+      "row": 12211,
+      "col": 40678
+    },
+    "mola_elevation_m": -1095,
+    "swim_source_pixel": {
+      "row": 1308,
+      "col": 6356
+    },
+    "swim_ci_0_1m": 0.05520833656191826,
+    "swim_status": "sampled_consistency_index",
+    "cell_size_equator_m": 5927.6,
+    "site_point_note": "Approximate map reference point; not a site boundary or landing recommendation."
+  },
+  {
+    "id": "valles_marineris",
+    "name": "Valles Marineris",
+    "lat": -13.9,
+    "lon_east": -59.2,
+    "grid_row": 1039,
+    "grid_col": 1208,
+    "mola_source_pixel": {
+      "row": 13299,
+      "col": 15462
+    },
+    "mola_elevation_m": -2611,
+    "swim_source_pixel": {
+      "row": 1478,
+      "col": 2416
+    },
+    "swim_ci_0_1m": 0.0,
+    "swim_status": "sampled_consistency_index",
+    "cell_size_equator_m": 5927.6,
+    "site_point_note": "Approximate map reference point; not a site boundary or landing recommendation."
+  },
+  {
+    "id": "elysium_planitia",
+    "name": "Elysium Planitia",
+    "lat": 4.5,
+    "lon_east": 135.9,
+    "grid_row": 855,
+    "grid_col": 3159,
+    "mola_source_pixel": {
+      "row": 10944,
+      "col": 40435
+    },
+    "mola_elevation_m": -2663,
+    "swim_source_pixel": {
+      "row": 1110,
+      "col": 6318
+    },
+    "swim_ci_0_1m": -0.11624995619058609,
+    "swim_status": "sampled_consistency_index",
+    "cell_size_equator_m": 5927.6,
+    "site_point_note": "Approximate map reference point; not a site boundary or landing recommendation."
+  }
+]

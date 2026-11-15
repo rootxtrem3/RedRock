@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "index.ts": {
+      "includeFiles": "data/mars/processed/**",
+      "maxDuration": 30
+    }
+  }
+}
