@@ -198,7 +198,6 @@ export const LAYER_DEFINITIONS: Record<LayerId, LayerDefinition> = {
 
 export const QUICK_LAYERS: Array<{ id: LayerId; label: string }> = [
   { id: 'elevation', label: 'Elevation' },
-  { id: 'day-temperature', label: 'Thermal' },
-  { id: 'hydrated-minerals', label: 'Mineral' },
+  { id: 'thermal-inertia', label: 'Thermal' },
   { id: 'visual', label: 'Imagery' },
 ]

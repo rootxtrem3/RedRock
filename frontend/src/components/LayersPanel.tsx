@@ -17,7 +17,6 @@ const layerGroups: Array<{
   { name: 'Base', ids: ['visual'] },
   { name: 'Terrain', ids: ['elevation', 'roughness'] },
   { name: 'Thermal', ids: ['day-temperature', 'thermal-inertia'] },
-  { name: 'Minerals', ids: ['hydrated-minerals', 'hematite'] },
 ]
 
 export function LayersPanel({
