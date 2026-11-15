@@ -303,11 +303,10 @@ function App() {
         >
           <img
             className="brand-mark"
-            src="/icon/red-rock-mark.png"
+            src="/icon/red-rock-brand.png"
             alt=""
             aria-hidden="true"
           />
-          <span className="brand-copy"><strong>RED-ROCK</strong><small>Mars operations</small></span>
         </button>
 
         <nav className="desktop-nav" aria-label="Primary navigation">
