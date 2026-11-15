@@ -165,10 +165,11 @@ export const LAYER_DEFINITIONS: Record<LayerId, LayerDefinition> = {
     description:
       'TES mineral-abundance indicator for sheet silicates and high-silica glass. This is a TES abundance product, not a CRISM hydration map.',
     legend: {
-      stops: ['#1b1917', '#4d3128', '#8c5a3f', '#c9975f', '#f0d9a6'],
-      low: 'NO INDICATOR',
-      high: 'STRONG INDICATOR',
-      caption: 'TES mineral abundance · 4 ppd',
+      stops: ['#5000d1', '#1936e3', '#066fd6', '#2adbf5', '#11e290', '#6fee63', '#ff000f'],
+      low: '0%',
+      high: '20%',
+      unit: 'TES mineral abundance',
+      caption: 'Source-colored scale · transparent pixels are no-data',
     },
   },
   hematite: {
@@ -186,10 +187,11 @@ export const LAYER_DEFINITIONS: Record<LayerId, LayerDefinition> = {
     description:
       'TES hematite-abundance map. Distinct from the sheet-silicate product and useful for locating oxidized, dust-free surfaces.',
     legend: {
-      stops: ['#1b1917', '#4b2a27', '#8a4036', '#c36b4e', '#eab48b'],
-      low: 'NO INDICATOR',
-      high: 'STRONG INDICATOR',
-      caption: 'TES mineral abundance · 4 ppd',
+      stops: ['#5000d1', '#1936e3', '#066fd6', '#2adbf5', '#11e290', '#6fee63', '#ff000f'],
+      low: '0%',
+      high: '20%',
+      unit: 'TES mineral abundance',
+      caption: 'Source-colored scale · transparent pixels are no-data',
     },
   },
 }

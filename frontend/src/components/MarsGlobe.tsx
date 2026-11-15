@@ -33,6 +33,8 @@ import { sharedHeightTexture } from '../data/textureCache'
 import type { CameraAction, LayerId, MarsLocation, Station } from '../types'
 
 const MARS_RADIUS = 1.16
+const MARKER_SURFACE_CLEARANCE = 0.0015
+let heightSampleCanvas: HTMLCanvasElement | null = null
 const ORIGIN = new Vector3(0, 0, 0)
 const TERRAIN_DISPLACEMENT_SCALE =
   ((MOLA_ELEVATION_MAX_METERS - MOLA_ELEVATION_MIN_METERS) /
@@ -66,6 +68,46 @@ function latLonVector(lat: number, lon: number, radius = MARS_RADIUS) {
     radius * Math.sin(latRadians),
     -radius * Math.cos(latRadians) * Math.sin(lonRadians),
   )
+}
+
+function terrainVector(lat: number, lon: number, image?: HTMLImageElement | null) {
+  if (!image?.naturalWidth || !image.naturalHeight) {
+    return latLonVector(lat, lon, MARS_RADIUS + 0.012)
+  }
+
+  heightSampleCanvas ??= document.createElement('canvas')
+  heightSampleCanvas.width = 2
+  heightSampleCanvas.height = 2
+  const context = heightSampleCanvas.getContext('2d', { willReadFrequently: true })
+  if (!context) return latLonVector(lat, lon, MARS_RADIUS + 0.012)
+
+  const width = image.naturalWidth
+  const height = image.naturalHeight
+  const x = ((lon + 180) / 360) * width
+  const y = ((90 - MathUtils.clamp(lat, -90, 90)) / 180) * height
+  const x0 = Math.floor(x) % width
+  const x1 = (x0 + 1) % width
+  const y0 = MathUtils.clamp(Math.floor(y), 0, height - 1)
+  const y1 = MathUtils.clamp(y0 + 1, 0, height - 1)
+  const xMix = x - Math.floor(x)
+  const yMix = MathUtils.clamp(y - Math.floor(y), 0, 1)
+
+  context.clearRect(0, 0, 2, 2)
+  context.drawImage(image, x0, y0, 1, 1, 0, 0, 1, 1)
+  context.drawImage(image, x1, y0, 1, 1, 1, 0, 1, 1)
+  context.drawImage(image, x0, y1, 1, 1, 0, 1, 1, 1)
+  context.drawImage(image, x1, y1, 1, 1, 1, 1, 1, 1)
+  const pixels = context.getImageData(0, 0, 2, 2).data
+  const top = pixels[0] * (1 - xMix) + pixels[4] * xMix
+  const bottom = pixels[8] * (1 - xMix) + pixels[12] * xMix
+  const gray = top * (1 - yMix) + bottom * yMix
+  const elevation =
+    MOLA_ELEVATION_MIN_METERS +
+    (gray / 255) * (MOLA_ELEVATION_MAX_METERS - MOLA_ELEVATION_MIN_METERS)
+  const radius =
+    MARS_RADIUS * (1 + elevation / MARS_MEAN_RADIUS_METERS) +
+    MARKER_SURFACE_CLEARANCE
+  return latLonVector(lat, lon, radius)
 }
 
 function vectorLatLon(point: Vector3) {
@@ -136,10 +178,12 @@ function ScientificLayerGlobe({ layer }: { layer: LayerId }) {
 
 function MarsSurface({
   layer,
+  onHeightImage,
   onCoordinateSelect,
   onReady,
 }: {
   layer: LayerId
+  onHeightImage: (image: HTMLImageElement) => void
   onCoordinateSelect: (lat: number, lon: number) => void
   onReady: () => void
 }) {
@@ -166,6 +210,10 @@ function MarsSurface({
   useEffect(() => {
     onReady()
   }, [onReady])
+
+  useEffect(() => {
+    onHeightImage(sourceHeight.image as HTMLImageElement)
+  }, [onHeightImage, sourceHeight])
 
   const tap = useGlobeTap((event) => {
     const coordinates = vectorLatLon(event.point)
@@ -276,16 +324,18 @@ function Marker({
   location,
   selected,
   prominent,
+  heightImage,
   onSelect,
 }: {
   location: MarsLocation
   selected: boolean
   prominent: boolean
+  heightImage: HTMLImageElement | null
   onSelect: (location: MarsLocation) => void
 }) {
   const position = useMemo(
-    () => latLonVector(location.lat, location.lon, MARS_RADIUS + 0.009),
-    [location.lat, location.lon],
+    () => terrainVector(location.lat, location.lon, heightImage),
+    [heightImage, location.lat, location.lon],
   )
 
   return (
@@ -298,10 +348,16 @@ function Marker({
   )
 }
 
-function StationMarker({ station }: { station: Station }) {
+function StationMarker({
+  station,
+  heightImage,
+}: {
+  station: Station
+  heightImage: HTMLImageElement | null
+}) {
   const position = useMemo(
-    () => latLonVector(station.lat, station.lon, MARS_RADIUS + 0.009),
-    [station.lat, station.lon],
+    () => terrainVector(station.lat, station.lon, heightImage),
+    [heightImage, station.lat, station.lon],
   )
 
   return <MapLocationPin position={position} prominent color="#C7654C" />
@@ -531,6 +587,7 @@ function CameraRig({
 }
 
 function GlobeScene(props: MarsGlobeProps) {
+  const [heightImage, setHeightImage] = useState<HTMLImageElement | null>(null)
   const showKnownLocations = props.missionSitesVisible || Boolean(props.selected)
   const terrainPatch = getTerrainPatch(props.selected?.id)
 
@@ -543,6 +600,7 @@ function GlobeScene(props: MarsGlobeProps) {
       <Suspense fallback={null}>
         <MarsSurface
           layer={props.layer}
+          onHeightImage={setHeightImage}
           onCoordinateSelect={props.onCoordinateSelect}
           onReady={props.onReady}
         />
@@ -565,6 +623,7 @@ function GlobeScene(props: MarsGlobeProps) {
             location={location}
             selected={props.selected?.id === location.id}
             prominent={props.missionSitesVisible && location.type === 'Mission site'}
+            heightImage={heightImage}
             onSelect={props.onSelect}
           />
         ))}
@@ -573,10 +632,11 @@ function GlobeScene(props: MarsGlobeProps) {
           location={props.selected}
           selected
           prominent
+          heightImage={heightImage}
           onSelect={props.onSelect}
         />
       )}
-      <StationMarker station={props.station} />
+      <StationMarker station={props.station} heightImage={heightImage} />
       {props.routeVisible && props.selected && (
         <Route selected={props.selected} station={props.station} variant={props.routeVariant} />
       )}
