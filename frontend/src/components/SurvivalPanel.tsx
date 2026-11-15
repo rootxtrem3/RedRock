@@ -13,23 +13,37 @@ import {
   TriangleAlert,
   Wind,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   formatLatitude,
   formatLongitude,
-  marsDistanceKm,
 } from '../data/marsData'
 import type { MarsLocation, Station } from '../types'
+import type { BackendLocationAnalysis, BackendRoutePlan } from '../data/backend'
 
 type RouteVariant = 'recommended' | 'shorter' | 'resource'
+const ROUTE_VARIANTS: Array<{ id: RouteVariant; label: string }> = [
+  { id: 'recommended', label: 'Balanced' },
+  { id: 'shorter', label: 'Shortest' },
+  { id: 'resource', label: 'Resource-oriented' },
+]
+
+function formatHours(hours: number | null | undefined) {
+  if (hours == null || !Number.isFinite(hours)) return 'Unavailable'
+  const minutes = Math.round(hours * 60)
+  return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`
+}
 
 type SurvivalPanelProps = {
   location: MarsLocation
   station: Station
   routeVisible: boolean
   routeBusy: boolean
-  routeStage: number
   routeVariant: RouteVariant
+  routePlan: BackendRoutePlan | null
+  routeError: string | null
+  analysis: BackendLocationAnalysis | null
+  analysisLoading: boolean
   onBack: () => void
   onCalculateRoute: () => void
   onRouteVariant: (variant: RouteVariant) => void
@@ -37,97 +51,19 @@ type SurvivalPanelProps = {
   onSources: () => void
 }
 
-const routeStages = [
-  'Evaluating terrain…',
-  'Checking hazard fields…',
-  'Locating resource points…',
-  'Optimizing safe corridor…',
-]
-
 const GUIDE_TABS = ['Environment', 'Hazards', 'Resources', 'Travel', 'Equipment', 'Emergency'] as const
 type GuideTab = (typeof GUIDE_TABS)[number]
-
-function parseThermalInertia(value: string) {
-  const match = value.match(/\d+(?:\.\d+)?/)
-  return match ? Number(match[0]) : null
-}
-
-function estimateSurfaceTemperature(
-  latitude: number,
-  thermalInertia: number,
-  seasonLs: number,
-  localTime: number,
-) {
-  const radians = Math.PI / 180
-  const obliquity = 25.19 * radians
-  const eccentricity = 0.0934
-  const solarLongitude = seasonLs * radians
-  const perihelionLongitude = 251 * radians
-  const distanceAu =
-    1.523679 * (1 - eccentricity ** 2) /
-    (1 + eccentricity * Math.cos(solarLongitude - perihelionLongitude))
-  const solarFlux = 1361 / distanceAu ** 2
-  const latitudeRadians = latitude * radians
-  const declination = Math.asin(Math.sin(obliquity) * Math.sin(solarLongitude))
-  const sampleCount = 48
-  let meanFlux = 0
-  let cosineFlux = 0
-  let sineFlux = 0
-
-  for (let index = 0; index < sampleCount; index += 1) {
-    const hourAngle = ((index / sampleCount) * 24 - 12) * (Math.PI / 12)
-    const cosineZenith =
-      Math.sin(latitudeRadians) * Math.sin(declination) +
-      Math.cos(latitudeRadians) * Math.cos(declination) * Math.cos(hourAngle)
-    const absorbedFlux = Math.max(0, cosineZenith) * solarFlux * (1 - 0.25)
-    meanFlux += absorbedFlux / sampleCount
-    cosineFlux += (2 / sampleCount) * absorbedFlux * Math.cos(hourAngle)
-    sineFlux += (2 / sampleCount) * absorbedFlux * Math.sin(hourAngle)
-  }
-
-  const emissivity = 0.95
-  const stefanBoltzmann = 5.670374419e-8
-  const assumedDownwellingInfrared = 10
-  const meanKelvin = Math.pow(
-    (meanFlux + assumedDownwellingInfrared) / (emissivity * stefanBoltzmann),
-    0.25,
-  )
-  const marsSolSeconds = 88775
-  const angularFrequency = (2 * Math.PI) / marsSolSeconds
-  const radiativeConductance =
-    4 * emissivity * stefanBoltzmann * meanKelvin ** 3
-  const conductiveImpedance = thermalInertia * Math.sqrt(angularFrequency / 2)
-  const forcingAmplitude = Math.hypot(cosineFlux, sineFlux)
-  const temperatureAmplitude =
-    forcingAmplitude /
-    Math.hypot(radiativeConductance, conductiveImpedance)
-  const forcingPhase = Math.atan2(sineFlux, cosineFlux)
-  const thermalLag = Math.atan2(conductiveImpedance, radiativeConductance)
-  const hourAngle = (localTime - 12) * (Math.PI / 12)
-  const currentKelvin =
-    meanKelvin + temperatureAmplitude * Math.cos(hourAngle - forcingPhase - thermalLag)
-
-  return {
-    currentCelsius: currentKelvin - 273.15,
-    minimumCelsius: meanKelvin - temperatureAmplitude - 273.15,
-    maximumCelsius: meanKelvin + temperatureAmplitude - 273.15,
-  }
-}
-
-function formatTravelTime(distance: number) {
-  const totalMinutes = Math.round((distance / 5) * 60)
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-  return `${hours}h ${minutes.toString().padStart(2, '0')}m`
-}
 
 export function SurvivalPanel({
   location,
   station,
   routeVisible,
   routeBusy,
-  routeStage,
   routeVariant,
+  routePlan,
+  routeError,
+  analysis,
+  analysisLoading,
   onBack,
   onCalculateRoute,
   onRouteVariant,
@@ -135,26 +71,23 @@ export function SurvivalPanel({
   onSources,
 }: SurvivalPanelProps) {
   const [activeTab, setActiveTab] = useState<GuideTab>('Environment')
-  const directDistance = useMemo(() => {
-    return Math.max(0.1, marsDistanceKm(location, station))
-  }, [location, station])
-  const distance = directDistance * 1.08
-
+  const hazards = analysis?.hazards !== undefined
+    ? analysis.hazards.map((hazard) => ({
+        name: hazard.name,
+        level: hazard.level === 'high' ? 'High' as const : hazard.level === 'medium' ? 'Medium' as const : hazard.level === 'low' ? 'Low' as const : 'Unknown' as const,
+        note: hazard.evidence.value ?? hazard.evidence.caveat ?? 'No supporting detail returned',
+      }))
+    : location.hazards
+  const hazardLevel = hazards.some((hazard) => hazard.level === 'High')
+    ? 'High'
+    : hazards.some((hazard) => hazard.level === 'Medium')
+      ? 'Medium'
+      : hazards.some((hazard) => hazard.level === 'Low')
+        ? 'Low'
+        : 'Unknown'
   useEffect(() => {
     if (routeVisible) setActiveTab('Travel')
   }, [routeVisible])
-
-  const routeOptions: Array<{
-    id: RouteVariant
-    label: string
-    distance: number
-    risk: string
-    note: string
-  }> = [
-    { id: 'recommended', label: 'Recommended', distance, risk: 'Low', note: 'Safety prioritized' },
-    { id: 'shorter', label: 'Shorter', distance: directDistance * 1.01, risk: 'High', note: 'Crosses unstable terrain' },
-    { id: 'resource', label: 'Resource route', distance: directDistance * 1.25, risk: 'Low', note: 'Two supply points' },
-  ]
 
   return (
     <aside className="floating-panel survival-panel panel-enter" aria-label={`Survival guide for ${location.name}`}>
@@ -168,7 +101,7 @@ export function SurvivalPanel({
           <h3>{location.name}</h3>
           <p>{formatLatitude(location.lat)} · {formatLongitude(location.lon)}</p>
         </div>
-        <div className="guide-status"><span /> Analysis ready <small>MGS-{location.id.slice(0, 3).toUpperCase()}</small></div>
+        <div className="guide-status"><span /> {analysisLoading ? 'Loading backend analysis' : analysis ? 'Backend analysis received' : 'Backend data unavailable'} <small>MGS-{location.id.slice(0, 3).toUpperCase()}</small></div>
       </header>
 
       <nav className="guide-index" role="tablist" aria-label="Survival guide sections">
@@ -198,12 +131,12 @@ export function SurvivalPanel({
               <span>Prototype catalog temperature</span>
               <strong>{location.temperature}</strong>
             </article>
-            <article><Gauge size={16} /><span>Pressure</span><strong>{location.pressure}</strong></article>
+            <article><Gauge size={16} /><span>Pressure</span><strong>{analysis?.surfacePressurePa?.value == null ? 'Unavailable' : `${analysis.surfacePressurePa.value.toLocaleString()} ${analysis.surfacePressurePa.unit ?? 'Pa'}`}</strong></article>
             <article><Navigation size={16} /><span>Gravity</span><strong>3.71 m/s²</strong></article>
-            <article><Sun size={16} /><span>Solar exposure</span><strong>{location.solar}</strong></article>
-            <article><Wind size={16} /><span>Dust</span><strong>{location.dust}</strong></article>
+            <article><Sun size={16} /><span>Solar flux</span><strong>{analysis?.solarFlux?.value == null ? 'Unavailable' : `${analysis.solarFlux.value.toLocaleString()} ${analysis.solarFlux.unit ?? 'W/m²'}`}</strong></article>
+            <article><Wind size={16} /><span>Dust opacity</span><strong>{analysis?.dustOpacity?.value == null ? 'Unavailable' : `${analysis.dustOpacity.value} ${analysis.dustOpacity.unit ?? ''}`}</strong></article>
           </div>
-          <ThermalEstimate key={location.id} location={location} />
+          <ThermalEstimate analysis={analysis} loading={analysisLoading} />
           <p className="data-caveat">Orbital and mission observations. Conditions vary by season and local solar time.</p>
         </section>
 
@@ -212,12 +145,12 @@ export function SurvivalPanel({
             <span>02</span><div><small>Ranked analysis</small><h4>Hazards</h4></div>
           </div>
           <div className="hazard-summary">
-            <div className="hazard-level-mark"><TriangleAlert size={18} /><span>Overall hazard</span><strong>Elevated</strong></div>
-            <p>Route planning should account for {location.hazards[0]?.name.toLowerCase() ?? 'local terrain'}.</p>
+          <div className="hazard-level-mark"><TriangleAlert size={18} /><span>Highest listed hazard</span><strong>{hazardLevel}</strong></div>
+          <p>{analysis?.hazards ? 'Hazards returned by backend analysis.' : 'Prototype catalog hazards; backend assessment unavailable.'}</p>
           </div>
           <div className="hazard-list">
-            {(['High', 'Medium', 'Low'] as const).map((level) => {
-              const matchingHazards = location.hazards.filter((hazard) => hazard.level === level)
+            {(['High', 'Medium', 'Low', 'Unknown'] as const).map((level) => {
+              const matchingHazards = hazards.filter((hazard) => hazard.level === level)
               if (!matchingHazards.length) return null
               return (
                 <div className={`hazard-group level-${level.toLowerCase()}`} key={level}>
@@ -240,14 +173,23 @@ export function SurvivalPanel({
             <span>03</span><div><small>Evidence-based findings</small><h4>Resources</h4></div>
           </div>
           <div className="survival-resource-list">
-            {location.resources.map((resource) => (
-              <article key={resource.name}>
-                <div className="resource-evidence-mark" />
-                <div><span>{resource.name}</span><strong>{resource.status}</strong><small>Evidence: {resource.evidence}</small></div>
-                <div className="confidence-badge"><span>{resource.confidence}</span><small>Confidence</small></div>
-              </article>
-            ))}
+            {analysis?.resources !== undefined
+              ? analysis.resources.map((resource) => (
+                  <article key={resource.name}>
+                    <div className="resource-evidence-mark" />
+                    <div><span>{resource.name}</span><strong>{resource.status}</strong><small>{resource.evidence.value ?? resource.evidence.caveat ?? 'No evidence detail returned'}</small></div>
+                    <div className="confidence-badge"><span>{resource.evidence.confidence ?? 'Unknown'}</span><small>{resource.evidence.evidenceKind}</small></div>
+                  </article>
+                ))
+              : location.resources.map((resource) => (
+                  <article key={resource.name}>
+                    <div className="resource-evidence-mark" />
+                    <div><span>{resource.name}</span><strong>{resource.status}</strong><small>Prototype evidence: {resource.evidence}</small></div>
+                    <div className="confidence-badge"><span>{resource.confidence}</span><small>Catalog confidence</small></div>
+                  </article>
+                ))}
           </div>
+          {!analysis?.resources && <p className="data-caveat">These catalog findings are authored prototype content and have not been returned by the backend.</p>}
           <button type="button" className="text-action" onClick={onSources}><Database size={14} /> Source data</button>
         </section>
 
@@ -285,7 +227,7 @@ export function SurvivalPanel({
           </div>
           <div className="emergency-callout">
             <TriangleAlert size={19} />
-            <div><strong>If mobility is lost</strong><p>Establish a relay beacon, conserve thermal power, and avoid unsurveyed slopes. Route markers identify two provisional refuge points.</p></div>
+            <div><strong>If mobility is lost</strong><p>Follow verified backend waypoint guidance when available. Until then, use established mission contingency procedures; this prototype does not identify validated refuge points.</p></div>
           </div>
         </section>
 
@@ -302,33 +244,25 @@ export function SurvivalPanel({
             </button>
           </div>
 
-          <div className="route-summary-grid">
-            <div><span>Safe route</span><strong>{distance.toFixed(1)} km</strong></div>
-            <div><span>Est. travel</span><strong>{formatTravelTime(distance)}</strong></div>
-            <div><span>Initial risk</span><strong>Moderate</strong></div>
-          </div>
-
           {routeBusy ? (
-            <div className="route-calculating" aria-live="polite">
-              <div className="route-progress-head"><span>Calculating safe route</span><strong>{Math.min(100, (routeStage + 1) * 25)}%</strong></div>
-              <div className="route-progress-track"><span style={{ width: `${Math.min(100, (routeStage + 1) * 25)}%` }} /></div>
-              <ul>
-                {routeStages.map((stage, index) => (
-                  <li className={index <= routeStage ? 'is-complete' : ''} key={stage}>
-                    <span>{index < routeStage ? <Check size={11} /> : index + 1}</span>{stage}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : !routeVisible ? (
+            <div className="route-calculating" aria-live="polite">Requesting the backend route planner…</div>
+          ) : !routeVisible || !routePlan ? (
+            <>
+              {routeError && <p className="thermal-estimate-empty" role="alert">Route unavailable: {routeError}</p>}
             <button type="button" className="primary-action wide calculate-route" onClick={onCalculateRoute}>
-              <Navigation size={16} /> Calculate safe route
+              <Navigation size={16} /> Request route plan
             </button>
+            </>
           ) : (
             <div className="route-results">
-              <div className="route-optimized"><Shield size={15} /><span>Route optimized for safety</span><small>Distance is secondary</small></div>
+              <div className="route-optimized"><Shield size={15} /><span>{routePlan.coverage === 'terrain-sampled' ? 'Terrain sampled' : routePlan.coverage === 'geometry-only' ? 'Geometry only' : 'Coverage unavailable'}</span><small>{routePlan.algorithm}</small></div>
+              <div className="route-summary-grid">
+                <div><span>Route distance</span><strong>{routePlan.distanceKm.toFixed(1)} km</strong></div>
+                <div><span>Planning estimate</span><strong>{formatHours(routePlan.estimatedTravelHours)}</strong></div>
+                <div><span>Max slope</span><strong>{routePlan.maximumSlopeDegrees == null ? 'Unavailable' : `${routePlan.maximumSlopeDegrees.toFixed(1)}°`}</strong></div>
+              </div>
               <div className="route-options">
-                {routeOptions.map((route) => (
+                {ROUTE_VARIANTS.map((route) => (
                   <button
                     type="button"
                     key={route.id}
@@ -336,13 +270,13 @@ export function SurvivalPanel({
                     onClick={() => onRouteVariant(route.id)}
                   >
                     <span className="route-option-radio">{routeVariant === route.id && <i />}</span>
-                    <span className="route-option-copy"><em>{route.label}</em><strong>{route.distance.toFixed(1)} km</strong><small>{route.note}</small></span>
-                    <span className={`risk-tag risk-${route.risk.toLowerCase()}`}>Risk {route.risk}</span>
-                    <span className="route-time">{formatTravelTime(route.distance)}</span>
+                    <span className="route-option-copy"><em>{route.label}</em><small>Recalculate with backend</small></span>
                   </button>
                 ))}
               </div>
-              <div className="route-map-key"><span><i className="key-current" /> Current</span><span><i className="key-route" /> Safe route</span><span><i className="key-station" /> Station</span></div>
+              <ol className="route-waypoints">{routePlan.waypoints.map((waypoint, index) => <li key={`${waypoint.lat}-${waypoint.lon}-${index}`}><strong>{waypoint.title}</strong><span>{waypoint.distanceKm.toFixed(1)} km</span><small>{waypoint.reason}</small></li>)}</ol>
+              {routePlan.assumptions.map((assumption) => <p className="thermal-estimate-caveat" key={assumption}>Assumption: {assumption}</p>)}
+              {routePlan.caveats.map((caveat) => <p className="thermal-estimate-caveat" key={caveat}>{caveat}</p>)}
             </div>
           )}
         </section>}
@@ -351,54 +285,37 @@ export function SurvivalPanel({
   )
 }
 
-function ThermalEstimate({ location }: { location: MarsLocation }) {
-  const [thermalInertiaInput, setThermalInertiaInput] = useState(() => {
-    const value = parseThermalInertia(location.thermalInertia)
-    return value === null ? '' : String(value)
-  })
-  const [seasonLs, setSeasonLs] = useState(90)
-  const [localTime, setLocalTime] = useState(14)
-  const thermalInertia = Number(thermalInertiaInput)
-  const estimate = useMemo(
-    () =>
-      Number.isFinite(thermalInertia) && thermalInertia >= 20 && thermalInertia <= 1500
-        ? estimateSurfaceTemperature(location.lat, thermalInertia, seasonLs, localTime)
-        : null,
-    [localTime, location.lat, seasonLs, thermalInertia],
-  )
+function ThermalEstimate({
+  analysis,
+  loading,
+}: {
+  analysis: BackendLocationAnalysis | null
+  loading: boolean
+}) {
+  const inertia = analysis?.thermalInertia
+  const estimate = analysis?.surfaceTemperature
 
   return (
-    <section className="thermal-estimate" aria-label="Thermal inertia temperature estimate">
+    <section className="thermal-estimate" aria-label="Backend thermal analysis">
       <div className="thermal-estimate-heading">
-        <div><span>SIMPLIFIED MODEL</span><strong>Thermal response estimate</strong></div>
+        <div><span>BACKEND MODEL</span><strong>Thermal conditions</strong></div>
         <Thermometer size={15} />
       </div>
-      <label className="thermal-estimate-input">
-        Thermal inertia <small>J m⁻² K⁻¹ s⁻½</small>
-        <input
-          type="number"
-          min="20"
-          max="1500"
-          step="10"
-          value={thermalInertiaInput}
-          onChange={(event) => setThermalInertiaInput(event.target.value)}
-          placeholder="Enter published value"
-        />
-      </label>
-      <div className="thermal-estimate-controls">
-        <label>Season, Ls <input type="range" min="0" max="360" step="5" value={seasonLs} onChange={(event) => setSeasonLs(Number(event.target.value))} /><small>{seasonLs}°</small></label>
-        <label>Local solar time <select value={localTime} onChange={(event) => setLocalTime(Number(event.target.value))}>{[0, 3, 6, 9, 12, 15, 18, 21].map((hour) => <option key={hour} value={hour}>{String(hour).padStart(2, '0')}:00</option>)}</select></label>
+      <div className="thermal-estimate-results">
+        <div><span>Thermal inertia</span><strong>{inertia?.value == null ? 'Unavailable' : `${inertia.value} ${inertia.unit ?? 'J m⁻² K⁻¹ s⁻½'}`}</strong></div>
+        <div><span>Estimated at requested conditions</span><strong>{estimate?.currentCelsius == null ? 'Unavailable' : `${estimate.currentCelsius.toFixed(0)}°C`}</strong></div>
+        <div><span>Modeled range</span><strong>{estimate?.minimumCelsius == null || estimate.maximumCelsius == null ? 'Unavailable' : `${estimate.minimumCelsius.toFixed(0)}° to ${estimate.maximumCelsius.toFixed(0)}°C`}</strong></div>
       </div>
-      {estimate ? (
-        <div className="thermal-estimate-results">
-          <div><span>At selected time</span><strong>{estimate.currentCelsius.toFixed(0)}°C</strong></div>
-          <div><span>First-harmonic range</span><strong>{estimate.minimumCelsius.toFixed(0)}° to {estimate.maximumCelsius.toFixed(0)}°C</strong></div>
-        </div>
-      ) : (
-        <p className="thermal-estimate-empty">No numeric thermal-inertia sample is bundled for this site. Enter a published value to calculate an estimate.</p>
+      {loading && <p className="thermal-estimate-empty" role="status">Requesting site thermal analysis…</p>}
+      {!loading && !estimate && <p className="thermal-estimate-empty">No backend estimate is available for this location and season.</p>}
+      {estimate && (
+        <>
+          <p className="thermal-estimate-caveat">{estimate.modelName}. Ls {estimate.seasonLsDegrees}°, local solar time {estimate.localSolarTimeHours.toFixed(1)} h. {estimate.caveat}</p>
+          {estimate.assumptions.length > 0 && <p className="thermal-estimate-caveat">Assumptions: {estimate.assumptions.join('; ')}.</p>}
+          {estimate.sourceName && estimate.sourceUrl && <a className="thermal-estimate-source" href={estimate.sourceUrl} target="_blank" rel="noreferrer">{estimate.sourceName} ↗</a>}
+        </>
       )}
-      <p className="thermal-estimate-caveat">First-harmonic surface energy-balance estimate. Assumes albedo 0.25, emissivity 0.95, and fixed 10 W/m² atmospheric infrared. Ignores slope, local shadows, dust opacity, weather, subsurface layering, and seasonal frost; not an observed temperature or mission-safety forecast. Pre-filled inertia values come from prototype site content and are not API-validated.</p>
-      <a className="thermal-estimate-source" href="https://www.mars.asu.edu/data/tes_putzigti/nighttime2005/" target="_blank" rel="noreferrer">MGS TES nighttime thermal-inertia product ↗</a>
+      {!loading && analysis?.unknowns?.map((unknown) => <p className="thermal-estimate-caveat" key={unknown}>Unknown: {unknown}</p>)}
     </section>
   )
 }

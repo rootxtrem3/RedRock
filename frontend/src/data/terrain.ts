@@ -77,3 +77,14 @@ export const TERRAIN_PATCHES: Record<string, TerrainPatchDefinition> = {
 export function getTerrainPatch(locationId?: string) {
   return locationId ? TERRAIN_PATCHES[locationId] : undefined
 }
+
+export function getTerrainPatchAt(lat: number, lon: number) {
+  const normalizedLon = ((lon + 180) % 360 + 360) % 360 - 180
+  return Object.values(TERRAIN_PATCHES).find(
+    (patch) =>
+      lat <= patch.bounds.north &&
+      lat >= patch.bounds.south &&
+      normalizedLon >= patch.bounds.west &&
+      normalizedLon <= patch.bounds.east,
+  )
+}

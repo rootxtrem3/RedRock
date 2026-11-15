@@ -1,9 +1,12 @@
 import { ArrowLeft, ArrowRight, Database, Shield, X } from 'lucide-react'
 import { formatLatitude, formatLongitude } from '../data/marsData'
 import type { MarsLocation } from '../types'
+import type { BackendLocationAnalysis } from '../data/backend'
 
 type LocationPanelProps = {
   location: MarsLocation
+  analysis: BackendLocationAnalysis | null
+  analysisLoading: boolean
   expanded: boolean
   onExpand: () => void
   onCollapse: () => void
@@ -25,6 +28,8 @@ function DataRow({ label, value }: { label: string; value: string }) {
 
 export function LocationPanel({
   location,
+  analysis,
+  analysisLoading,
   expanded,
   onExpand,
   onCollapse,
@@ -52,9 +57,9 @@ export function LocationPanel({
         </div>
         {location.mission && <p className="mission-tag">{location.mission}</p>}
         <div className="location-summary-grid">
-          <DataRow label="Elevation" value={location.elevation} />
+          <DataRow label={analysis?.elevationMeters?.value == null ? 'Elevation (catalog)' : 'Elevation'} value={analysis?.elevationMeters?.value == null ? location.elevation : `${analysis.elevationMeters.value.toLocaleString()} ${analysis.elevationMeters.unit ?? 'm'}`} />
           <DataRow label="Terrain" value={location.terrain} />
-          <DataRow label="Temperature" value={location.temperature} />
+          <DataRow label="Temperature estimate" value={analysis?.surfaceTemperature?.currentCelsius == null ? (analysisLoading ? 'Loading backend data' : 'Unavailable') : `${analysis.surfaceTemperature.currentCelsius.toFixed(1)}°C`} />
           <DataRow label="Surface" value={location.surface} />
         </div>
         <div className="panel-actions">
@@ -99,36 +104,42 @@ export function LocationPanel({
 
         <section className="panel-section">
           <div className="section-label"><span>02</span> Terrain</div>
-          <DataRow label="Elevation" value={location.elevation} />
+          <DataRow label={analysis?.elevationMeters?.value == null ? 'Elevation (catalog)' : 'Elevation'} value={analysis?.elevationMeters?.value == null ? location.elevation : `${analysis.elevationMeters.value.toLocaleString()} ${analysis.elevationMeters.unit ?? 'm'}`} />
           <DataRow label="Roughness" value={location.roughness} />
-          <DataRow label="Thermal inertia" value={location.thermalInertia} />
+          <DataRow label={analysis?.thermalInertia?.value == null ? 'Thermal inertia (catalog)' : 'Thermal inertia'} value={analysis?.thermalInertia?.value == null ? location.thermalInertia : `${analysis.thermalInertia.value} ${analysis.thermalInertia.unit ?? 'J m⁻² K⁻¹ s⁻½'}`} />
+          <DataRow label="Slope" value={analysis?.slopeDegrees?.value == null ? 'Unavailable' : `${analysis.slopeDegrees.value.toFixed(1)}°`} />
+          <DataRow label="Local relief" value={analysis?.localReliefMeters?.value == null ? 'Unavailable' : `${analysis.localReliefMeters.value.toFixed(0)} ${analysis.localReliefMeters.unit ?? 'm'}`} />
           <DataRow label="Surface class" value={location.surface} />
         </section>
 
         <section className="panel-section">
           <div className="section-label"><span>03</span> Environment</div>
-          <DataRow label="Surface temperature" value={location.temperature} />
+          <DataRow label="Surface temperature estimate" value={analysis?.surfaceTemperature?.currentCelsius == null ? (analysisLoading ? 'Loading backend data' : 'Unavailable') : `${analysis.surfaceTemperature.currentCelsius.toFixed(1)}°C`} />
           <DataRow label="Dust" value={location.dust} />
-          <DataRow label="Solar exposure" value={location.solar} />
-          <DataRow label="Pressure" value={location.pressure} />
+          <DataRow label="Solar flux" value={analysis?.solarFlux?.value == null ? location.solar : `${analysis.solarFlux.value.toLocaleString()} ${analysis.solarFlux.unit ?? 'W/m²'}`} />
+          <DataRow label={analysis?.surfacePressurePa?.value == null ? 'Pressure (catalog)' : 'Pressure'} value={analysis?.surfacePressurePa?.value == null ? location.pressure : `${analysis.surfacePressurePa.value.toLocaleString()} ${analysis.surfacePressurePa.unit ?? 'Pa'}`} />
+          <DataRow label="Dust opacity" value={analysis?.dustOpacity?.value == null ? 'Unavailable' : `${analysis.dustOpacity.value} ${analysis.dustOpacity.unit ?? ''}`} />
+          <DataRow label="Radiation" value={analysis?.radiation?.value == null ? 'Unavailable' : `${analysis.radiation.value} ${analysis.radiation.unit ?? ''}`} />
         </section>
 
         <section className="panel-section">
           <div className="section-label"><span>04</span> Resource indicators</div>
           <div className="resource-list">
-            {location.resources.map((resource) => (
-              <div className="resource-row" key={resource.name}>
-                <div>
-                  <strong>{resource.name}</strong>
-                  <small>{resource.evidence}</small>
-                </div>
-                <div className="resource-status">
-                  <span>{resource.status}</span>
-                  <small>{resource.confidence} confidence</small>
-                </div>
-              </div>
-            ))}
+            {analysis?.resources !== undefined
+              ? analysis.resources.map((resource) => (
+                  <div className="resource-row" key={resource.name}>
+                    <div><strong>{resource.name}</strong><small>{resource.evidence.sourceName ?? resource.evidence.value ?? resource.evidence.caveat ?? 'No evidence details returned'}</small></div>
+                    <div className="resource-status"><span>{resource.status}</span><small>{resource.evidence.confidence ?? resource.evidence.evidenceKind}</small></div>
+                  </div>
+                ))
+              : location.resources.map((resource) => (
+                  <div className="resource-row" key={resource.name}>
+                    <div><strong>{resource.name}</strong><small>Prototype evidence: {resource.evidence}</small></div>
+                    <div className="resource-status"><span>{resource.status}</span><small>{resource.confidence} catalog confidence</small></div>
+                  </div>
+                ))}
           </div>
+          {!analysis?.resources && <p className="data-caveat">Catalog resource rows are prototype content, not backend findings.</p>}
           <button type="button" className="text-action" onClick={onSources}>
             <Database size={14} /> Source data
           </button>

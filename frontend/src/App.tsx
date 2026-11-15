@@ -6,6 +6,7 @@ import {
   Minus,
   Plus,
   RotateCcw,
+  RotateCw,
   Satellite,
   Shield,
   Target,
@@ -30,7 +31,13 @@ import {
   makeCoordinateLocation,
 } from './data/marsData'
 import { LAYER_DEFINITIONS, QUICK_LAYERS } from './data/layers'
-import { getTerrainPatch } from './data/terrain'
+import { getTerrainPatch, getTerrainPatchAt } from './data/terrain'
+import {
+  fetchLocationAnalysis,
+  fetchRoutePlan,
+  type BackendLocationAnalysis,
+  type BackendRoutePlan,
+} from './data/backend'
 import type { CameraAction, LayerId, MarsLocation, Station } from './types'
 
 type Drawer = 'sites' | 'stations' | 'layers' | null
@@ -54,8 +61,7 @@ function useReducedMotion() {
 function App() {
   const reducedMotion = useReducedMotion()
   const searchRef = useRef<SearchNavigatorHandle>(null)
-  const analyzeTimer = useRef<number | null>(null)
-  const routeTimer = useRef<number | null>(null)
+  const routeRequest = useRef<AbortController | null>(null)
   const [selected, setSelected] = useState<MarsLocation | null>(null)
   const [stations, setStations] = useState<Station[]>(initialStations)
   const [drawer, setDrawer] = useState<Drawer>(null)
@@ -65,56 +71,91 @@ function App() {
   const [layer, setLayer] = useState<LayerId>('visual')
   const [missionSitesVisible, setMissionSitesVisible] = useState(true)
   const [globeReady, setGlobeReady] = useState(false)
-  const [analyzing, setAnalyzing] = useState(false)
+  const [hasInteracted, setHasInteracted] = useState(false)
+  const [autoRotateEnabled, setAutoRotateEnabled] = useState(!reducedMotion)
+  const [locationAnalysis, setLocationAnalysis] = useState<BackendLocationAnalysis | null>(null)
+  const [analysisLoading, setAnalysisLoading] = useState(false)
   const [focusToken, setFocusToken] = useState(0)
   const [zoom, setZoom] = useState(5.1)
   const [cameraAction, setCameraAction] = useState<CameraAction>({ type: 'reset', nonce: 0 })
   const [routeBusy, setRouteBusy] = useState(false)
-  const [routeStage, setRouteStage] = useState(0)
   const [routeVisible, setRouteVisible] = useState(false)
   const [routeVariant, setRouteVariant] = useState<RouteVariant>('recommended')
+  const [routePlan, setRoutePlan] = useState<BackendRoutePlan | null>(null)
+  const [routeError, setRouteError] = useState<string | null>(null)
 
   const activeStation = useMemo(
     () => stations.find((station) => station.isHome) ?? stations[0],
     [stations],
   )
-  const activeTerrainPatch = getTerrainPatch(selected?.id)
+  const activeTerrainPatch =
+    getTerrainPatch(selected?.id) ??
+    (selected ? getTerrainPatchAt(selected.lat, selected.lon) : undefined)
   const activeLayer = LAYER_DEFINITIONS[layer]
 
+  useEffect(() => {
+    if (!selected) {
+      setLocationAnalysis(null)
+      setAnalysisLoading(false)
+      return
+    }
+    const controller = new AbortController()
+    setLocationAnalysis(null)
+    setAnalysisLoading(true)
+    fetchLocationAnalysis(selected, controller.signal)
+      .then((result) => {
+        if (!controller.signal.aborted) setLocationAnalysis(result)
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setLocationAnalysis(null)
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setAnalysisLoading(false)
+      })
+    return () => controller.abort()
+  }, [selected?.id, selected?.lat, selected?.lon])
+
   const handleGlobeReady = useCallback(() => setGlobeReady(true), [])
+
+  useEffect(() => {
+    const stopIntroMotion = (event: Event) => {
+      if ((event.target as HTMLElement | null)?.closest('[data-auto-rotate-toggle]')) return
+      setHasInteracted(true)
+      setAutoRotateEnabled(false)
+    }
+    window.addEventListener('pointerdown', stopIntroMotion, true)
+    window.addEventListener('keydown', stopIntroMotion, true)
+    return () => {
+      window.removeEventListener('pointerdown', stopIntroMotion, true)
+      window.removeEventListener('keydown', stopIntroMotion, true)
+    }
+  }, [])
 
   const dispatchCamera = (type: CameraAction['type']) => {
     setCameraAction((current) => ({ type, nonce: current.nonce + 1 }))
   }
 
   const clearRouteCalculation = () => {
-    if (routeTimer.current !== null) {
-      window.clearInterval(routeTimer.current)
-      routeTimer.current = null
-    }
+    routeRequest.current?.abort()
+    routeRequest.current = null
     setRouteBusy(false)
   }
 
   const resetRoute = () => {
     clearRouteCalculation()
     setRouteVisible(false)
-    setRouteStage(0)
+    setRoutePlan(null)
+    setRouteError(null)
     setRouteVariant('recommended')
   }
 
   const selectLocation = (location: MarsLocation, openGuide = false) => {
-    if (analyzeTimer.current !== null) window.clearTimeout(analyzeTimer.current)
     setSelected(location)
     setDetailExpanded(false)
     setGuideOpen(openGuide)
     setDrawer(null)
     resetRoute()
-    setAnalyzing(true)
     setFocusToken((current) => current + 1)
-    analyzeTimer.current = window.setTimeout(() => {
-      setAnalyzing(false)
-      analyzeTimer.current = null
-    }, reducedMotion ? 120 : 1150)
   }
 
   const closeSelection = () => {
@@ -124,25 +165,41 @@ function App() {
     resetRoute()
   }
 
-  const calculateRoute = () => {
+  const calculateRoute = async (variant = routeVariant) => {
+    if (!selected) return
     clearRouteCalculation()
+    const controller = new AbortController()
+    routeRequest.current = controller
     setRouteVisible(false)
+    setRouteError(null)
     setRouteBusy(true)
-    setRouteStage(0)
-    let stage = 0
-    routeTimer.current = window.setInterval(() => {
-      stage += 1
-      if (stage >= 4) {
-        if (routeTimer.current !== null) window.clearInterval(routeTimer.current)
-        routeTimer.current = null
-        setRouteBusy(false)
-        setRouteVisible(true)
-        setRouteStage(3)
-        dispatchCamera('route')
-      } else {
-        setRouteStage(stage)
+    setRouteVariant(variant)
+    try {
+      const plan = await fetchRoutePlan({
+        start: { id: selected.id, lat: selected.lat, lon: selected.lon },
+        end: { id: activeStation.id, lat: activeStation.lat, lon: activeStation.lon },
+        variant,
+        travelSpeedKmPerHour: 5,
+      }, controller.signal)
+      if (controller.signal.aborted) return
+      setRoutePlan(plan)
+      setRouteVisible(true)
+      dispatchCamera('route')
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setRouteError(error instanceof Error ? error.message : 'Route service unavailable')
       }
-    }, reducedMotion ? 80 : 620)
+    } finally {
+      if (!controller.signal.aborted) {
+        routeRequest.current = null
+        setRouteBusy(false)
+      }
+    }
+  }
+
+  const chooseRouteVariant = (variant: RouteVariant) => {
+    setRouteVariant(variant)
+    void calculateRoute(variant)
   }
 
   const setHomeStation = (stationId: string) => {
@@ -199,8 +256,7 @@ function App() {
 
   useEffect(
     () => () => {
-      if (analyzeTimer.current !== null) window.clearTimeout(analyzeTimer.current)
-      if (routeTimer.current !== null) window.clearInterval(routeTimer.current)
+      routeRequest.current?.abort()
     },
     [],
   )
@@ -219,9 +275,10 @@ function App() {
         layer={layer}
         missionSitesVisible={missionSitesVisible}
         routeVisible={routeVisible}
-        routeVariant={routeVariant}
+        routePlan={routePlan}
         knownLocations={locations}
         reducedMotion={reducedMotion}
+        autoRotate={autoRotateEnabled}
         onSelect={selectLocation}
         onCoordinateSelect={(lat, lon) => selectLocation(makeCoordinateLocation(lat, lon))}
         onReady={handleGlobeReady}
@@ -269,7 +326,7 @@ function App() {
         </div>
       </header>
 
-      {!selected && !drawer && (
+      {!hasInteracted && !selected && !drawer && (
         <section className="planet-intro panel-enter" aria-label="Mars planetary view">
           <span className="intro-index">01 / PLANETARY VIEW</span>
           <h1>Mars</h1>
@@ -281,6 +338,8 @@ function App() {
       {!drawer && selected && !guideOpen && (
         <LocationPanel
           location={selected}
+          analysis={locationAnalysis}
+          analysisLoading={analysisLoading}
           expanded={detailExpanded}
           onExpand={() => setDetailExpanded(true)}
           onCollapse={() => setDetailExpanded(false)}
@@ -296,11 +355,14 @@ function App() {
           station={activeStation}
           routeVisible={routeVisible}
           routeBusy={routeBusy}
-          routeStage={routeStage}
           routeVariant={routeVariant}
+          routePlan={routePlan}
+          routeError={routeError}
+          analysis={locationAnalysis}
+          analysisLoading={analysisLoading}
           onBack={() => { setGuideOpen(false); resetRoute() }}
           onCalculateRoute={calculateRoute}
-          onRouteVariant={setRouteVariant}
+          onRouteVariant={chooseRouteVariant}
           onChooseStation={() => setDrawer('stations')}
           onSources={() => setSourcesOpen(true)}
         />
@@ -389,6 +451,18 @@ function App() {
         <button type="button" onClick={() => dispatchCamera('zoom-out')} aria-label="Zoom out"><Minus size={19} /></button>
         <button type="button" onClick={() => dispatchCamera('reset')} aria-label="Center Mars"><RotateCcw size={17} /></button>
         <button type="button" className={selected ? 'is-active' : ''} onClick={() => dispatchCamera('focus')} disabled={!selected} aria-label="Focus selected location"><LocateFixed size={18} /></button>
+        <button
+          type="button"
+          data-auto-rotate-toggle
+          className={autoRotateEnabled ? 'is-active' : ''}
+          onClick={() => {
+            setHasInteracted(true)
+            setAutoRotateEnabled((enabled) => !enabled)
+          }}
+          aria-label={autoRotateEnabled ? 'Stop Mars rotation' : 'Start Mars rotation'}
+          aria-pressed={autoRotateEnabled}
+          disabled={reducedMotion}
+        ><RotateCw size={17} /></button>
       </div>
 
       <footer className="telemetry-bar">
@@ -432,10 +506,10 @@ function App() {
         </div>
       )}
 
-      {analyzing && globeReady && (
+      {analysisLoading && globeReady && (
         <div className="analysis-status" role="status">
           <span className="analysis-icon"><i /><i /></span>
-          <div><strong>Analyzing location</strong><small>Terrain · Thermal · Resource indicators</small></div>
+          <div><strong>Loading site data</strong><small>Waiting for backend analysis</small></div>
         </div>
       )}
 

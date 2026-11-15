@@ -26,10 +26,12 @@ import {
   MOLA_ELEVATION_MAX_METERS,
   MOLA_ELEVATION_MIN_METERS,
   getTerrainPatch,
+  getTerrainPatchAt,
   type TerrainPatchDefinition,
 } from '../data/terrain'
 import { LAYER_DEFINITIONS } from '../data/layers'
 import { sharedHeightTexture } from '../data/textureCache'
+import type { BackendRoutePlan } from '../data/backend'
 import type { CameraAction, LayerId, MarsLocation, Station } from '../types'
 
 const MARS_RADIUS = 1.16
@@ -51,9 +53,10 @@ type MarsGlobeProps = {
   layer: LayerId
   missionSitesVisible: boolean
   routeVisible: boolean
-  routeVariant: 'recommended' | 'shorter' | 'resource'
+  routePlan: BackendRoutePlan | null
   knownLocations: MarsLocation[]
   reducedMotion: boolean
+  autoRotate: boolean
   onSelect: (location: MarsLocation) => void
   onCoordinateSelect: (lat: number, lon: number) => void
   onReady: () => void
@@ -363,83 +366,37 @@ function StationMarker({
   return <MapLocationPin position={position} prominent color="#C7654C" />
 }
 
-function greatCirclePoints(
-  start: Vector3,
-  end: Vector3,
-  variant: 'recommended' | 'shorter' | 'resource',
-) {
-  const startNormal = start.clone().normalize()
-  const endNormal = end.clone().normalize()
-  const angle = startNormal.angleTo(endNormal)
-  const points: Vector3[] = []
-  const count = 80
-  const detour =
-    variant === 'recommended'
-      ? angle * 0.16
-      : variant === 'resource'
-        ? angle * -0.32
-        : 0
-  const tangent = new Vector3().crossVectors(startNormal, endNormal).normalize()
-
-  for (let index = 0; index <= count; index += 1) {
-    const progress = index / count
-    let normal: Vector3
-    if (angle < 0.0001) {
-      normal = startNormal.clone()
-    } else {
-      const firstWeight = Math.sin((1 - progress) * angle) / Math.sin(angle)
-      const secondWeight = Math.sin(progress * angle) / Math.sin(angle)
-      normal = startNormal
-        .clone()
-        .multiplyScalar(firstWeight)
-        .add(endNormal.clone().multiplyScalar(secondWeight))
-        .normalize()
-    }
-    if (detour !== 0) {
-      normal.addScaledVector(tangent, Math.sin(progress * Math.PI) * detour).normalize()
-    }
-    points.push(normal.multiplyScalar(MARS_RADIUS + 0.0045))
-  }
-  return points
-}
-
-function Route({
-  selected,
-  station,
-  variant,
-}: {
-  selected: MarsLocation
-  station: Station
-  variant: 'recommended' | 'shorter' | 'resource'
-}) {
+function Route({ plan }: { plan: BackendRoutePlan }) {
   const points = useMemo(
-    () =>
-      greatCirclePoints(
-        latLonVector(selected.lat, selected.lon),
-        latLonVector(station.lat, station.lon),
-        variant,
-      ),
-    [selected.lat, selected.lon, station.lat, station.lon, variant],
+    () => plan.points.map((point) => {
+      const elevation = point.elevationMeters ?? 0
+      const radius =
+        MARS_RADIUS +
+        (elevation / MARS_MEAN_RADIUS_METERS) * MARS_RADIUS +
+        (point.elevationMeters == null ? 0.012 : 0.004)
+      return latLonVector(point.lat, point.lon, radius)
+    }),
+    [plan.points],
+  )
+  const waypoints = useMemo(
+    () => plan.waypoints.map((point) => latLonVector(point.lat, point.lon, MARS_RADIUS + 0.012)),
+    [plan.waypoints],
   )
 
-  const emergencyPoints = useMemo(
-    () => [points[Math.floor(points.length * 0.34)], points[Math.floor(points.length * 0.72)]],
-    [points],
-  )
+  if (points.length < 2) return null
 
   return (
     <group>
       <Line
         points={points}
-        color={variant === 'recommended' ? '#c7654c' : '#e8e2d8'}
-        lineWidth={variant === 'recommended' ? 2.2 : 1.4}
+        color={plan.coverage === 'terrain-sampled' ? '#c7654c' : '#c3a56b'}
+        lineWidth={2.2}
         transparent
         opacity={0.95}
       />
-      {variant === 'recommended' &&
-        emergencyPoints.map((point, index) => (
+      {waypoints.map((point, index) => (
           <mesh key={index} position={point}>
-            <sphereGeometry args={[0.0015, 12, 12]} />
+            <sphereGeometry args={[0.0022, 12, 12]} />
             <meshBasicMaterial color="#e8e2d8" />
           </mesh>
         ))}
@@ -453,6 +410,7 @@ function CameraRig({
   cameraAction,
   focusToken,
   reducedMotion,
+  autoRotate,
   onZoomChange,
 }: Pick<
   MarsGlobeProps,
@@ -461,6 +419,7 @@ function CameraRig({
   | 'cameraAction'
   | 'focusToken'
   | 'reducedMotion'
+  | 'autoRotate'
   | 'onZoomChange'
 >) {
   const { camera } = useThree()
@@ -576,7 +535,7 @@ function CameraRig({
       maxDistance={5.5}
       rotateSpeed={0.42}
       zoomSpeed={0.65}
-      autoRotate={!selected && !reducedMotion && !animating}
+      autoRotate={autoRotate && !selected && !reducedMotion && !animating}
       autoRotateSpeed={0.16}
       onStart={() => {
         animation.current = null
@@ -588,8 +547,31 @@ function CameraRig({
 
 function GlobeScene(props: MarsGlobeProps) {
   const [heightImage, setHeightImage] = useState<HTMLImageElement | null>(null)
+  const [cameraPatch, setCameraPatch] = useState<TerrainPatchDefinition | undefined>()
+  const patchCheckTime = useRef(0)
+  const { camera } = useThree()
   const showKnownLocations = props.missionSitesVisible || Boolean(props.selected)
-  const terrainPatch = getTerrainPatch(props.selected?.id)
+  const selectedPatch =
+    getTerrainPatch(props.selected?.id) ??
+    (props.selected
+      ? getTerrainPatchAt(props.selected.lat, props.selected.lon)
+      : undefined)
+  const terrainPatch = selectedPatch ?? cameraPatch
+
+  useFrame((state) => {
+    if (state.clock.elapsedTime - patchCheckTime.current < 0.4) return
+    patchCheckTime.current = state.clock.elapsedTime
+    if (selectedPatch) return
+    const altitude = Math.max(0.018, camera.position.length() - MARS_RADIUS)
+    const zoom = MathUtils.clamp(2 + Math.log2(2.56 / altitude) * 1.6, 2, 16)
+    if (zoom < 7) {
+      setCameraPatch((current) => current ? undefined : current)
+      return
+    }
+    const viewCenter = vectorLatLon(camera.position)
+    const nextPatch = getTerrainPatchAt(viewCenter.lat, viewCenter.lon)
+    setCameraPatch((current) => current?.id === nextPatch?.id ? current : nextPatch)
+  })
 
   return (
     <>
@@ -637,8 +619,8 @@ function GlobeScene(props: MarsGlobeProps) {
         />
       )}
       <StationMarker station={props.station} heightImage={heightImage} />
-      {props.routeVisible && props.selected && (
-        <Route selected={props.selected} station={props.station} variant={props.routeVariant} />
+      {props.routeVisible && props.routePlan && (
+        <Route plan={props.routePlan} />
       )}
       <CameraRig
         selected={props.selected}
@@ -646,6 +628,7 @@ function GlobeScene(props: MarsGlobeProps) {
         cameraAction={props.cameraAction}
         focusToken={props.focusToken}
         reducedMotion={props.reducedMotion}
+        autoRotate={props.autoRotate}
         onZoomChange={props.onZoomChange}
       />
     </>

@@ -42,3 +42,7 @@ The globe uses locally generated NASA products under `public/terrain/`:
 - **Local detail** — 6×6° THEMIS Day IR patches at 256 ppd with matching MOLA elevation for Jezero, Gale, Elysium, Olympus, and Valles.
 
 Regenerate the assets with `python3 scripts/prepare_mars_terrain.py` and `python3 scripts/prepare_mars_layer_globes.py`. Both scripts have a hard 5 GiB download budget and cache raw products under `data/mars/raw/`. Scientific values in the interface are curated prototype content; the interface labels uncertain or unavailable local data, and this is not a validated operational navigation system.
+
+## Backend integration
+
+The frontend API contract, component map, raster coverage, and integration notes are documented in [`BACKEND_HANDOFF.md`](./BACKEND_HANDOFF.md). Set `VITE_API_BASE_URL` when the API is hosted on a different origin. Route plans and temperature estimates are supplied by the backend; the frontend displays them with provenance and unavailable states.
