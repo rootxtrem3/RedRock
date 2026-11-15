@@ -154,9 +154,10 @@ The prepared global route grid is approximately 0.1° (about 5.93 km per cell at
 - Survival-guide sections are tabs: Environment, Hazards, Resources, Travel, Equipment, and Emergency. Route planning is nested in Travel.
 - Small text in the global stylesheet has been raised to improve readability. Check narrow mobile layouts when adding dense metadata.
 
-## Integration follow-up
+## Integration status
 
-1. Implement the two JSON endpoints above (or agree on a changed contract and update `src/data/backend.ts` and this document together).
-2. Add validated numeric rasters and manifests for any new spatial layer before exposing it in the globe selector.
-3. Return explicit per-field no-data/provenance metadata; do not make the frontend infer scientific confidence from color or prose.
-4. Add API error and loading states for any new data request, retaining current null-safe fallback behavior.
+- `GET /api/analysis/location` and `POST /api/routes` now match the frontend fetch adapter. Start the API and frontend separately; set `VITE_API_BASE_URL` when they are hosted on different origins.
+- Analysis returns sampled MOLA elevation, slope, local relief, and SWIM consistency with provenance. Values without a validated numeric input (temperature, pressure, dust, solar flux at arbitrary coordinates, and radiation) are explicitly null/unavailable.
+- Route variants run against the prepared grid. `resource` selects the highest-ranked reachable nearby SWIM consistency cell; SWIM consistency does not establish water presence or extraction feasibility.
+- Keep API types and this handoff synchronized. Keep null/no-data distinct from zero, and include source, resolution, coverage, and caveats with spatial values.
+- The 0.1° route grid is exploratory planning only and cannot certify rover-scale safety.
