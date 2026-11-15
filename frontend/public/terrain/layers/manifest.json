@@ -1,0 +1,266 @@
+{
+  "schemaVersion": 1,
+  "projection": "Simple cylindrical / planetocentric / east-positive",
+  "longitudeTextureRange": "-180 to 180",
+  "longitudeOrder": "east-positive, -180 degrees at the left edge",
+  "latitudeTextureRange": "-90 to 90",
+  "generatedAt": "2026-11-15T07:20:35.540535+00:00",
+  "generatedBy": "scripts/prepare_mars_layer_globes.py",
+  "downloadBudgetBytes": 5368709120,
+  "rawSourceBytesBefore": 1504493691,
+  "rawSourceBytesAfter": 1504493691,
+  "plannedSourceBytes": 163622848,
+  "sourceArchive": "ASU Mars Global Data Sets (mars.asu.edu/data)",
+  "layers": [
+    {
+      "id": "themis-day-ir",
+      "title": "THEMIS Day IR Global Mosaic",
+      "url": "/terrain/layers/themis-day-ir.webp",
+      "file": "frontend/public/terrain/layers/themis-day-ir.webp",
+      "format": "webp",
+      "dimensions": [
+        8192,
+        4096
+      ],
+      "longitudeRange": [
+        -180,
+        180
+      ],
+      "latitudeRange": [
+        -90,
+        90
+      ],
+      "alpha": true,
+      "productType": "Daytime thermal infrared brightness (not thermal inertia)",
+      "source": "NASA/JPL-Caltech/Arizona State University, Mars Odyssey THEMIS Day IR Global Mosaic v2.0 (ASU Mars Global Data Sets)",
+      "sourceUrl": "https://www.mars.asu.edu/data/thm_dir/",
+      "citation": "THEMIS Day IR Global Mosaic v2.0, ASU Mars Global Data Sets; NASA Mars Odyssey THEMIS daytime infrared (12.57 micrometre).",
+      "resolution": "256 ppd (~231 m/pixel) source",
+      "description": "Daytime thermal infrared (12.57 micrometre) brightness mosaic from Mars Odyssey THEMIS. The published global mosaic is 256 ppd; this browser texture is an 8K equirectangular colorized resample assembled from ASU JMARS WMS cells. No-data gores and unavailable cells are transparent.",
+      "attribution": "NASA/JPL-Caltech/Arizona State University, Mars Odyssey THEMIS Day IR Global Mosaic v2.0 (ASU Mars Global Data Sets)",
+      "outputSizeBytes": 12472430,
+      "webpQuality": 88,
+      "lossless": false,
+      "cellGrid": "2 longitude x 4 latitude, 180x45 degree cells",
+      "cellsUsed": 8,
+      "cellsMissing": 0,
+      "missingCellNames": [],
+      "sourcePixelGrid": [
+        8192,
+        4096
+      ],
+      "sourceMosaicPixelGrid": [
+        92160,
+        46080
+      ],
+      "sourceMosaicResolution": "256 ppd (~231 m/pixel)",
+      "wmsCellPixels": [
+        4096,
+        1024
+      ],
+      "valueMeaning": "relative daytime 12.57 micrometre brightness temperature",
+      "thermalRamp": {
+        "stops": [
+          {
+            "value": 0.0,
+            "rgb": [
+              9,
+              8,
+              28
+            ]
+          },
+          {
+            "value": 0.15,
+            "rgb": [
+              43,
+              17,
+              70
+            ]
+          },
+          {
+            "value": 0.32,
+            "rgb": [
+              107,
+              28,
+              82
+            ]
+          },
+          {
+            "value": 0.5,
+            "rgb": [
+              178,
+              49,
+              58
+            ]
+          },
+          {
+            "value": 0.68,
+            "rgb": [
+              231,
+              98,
+              39
+            ]
+          },
+          {
+            "value": 0.84,
+            "rgb": [
+              250,
+              176,
+              66
+            ]
+          },
+          {
+            "value": 1.0,
+            "rgb": [
+              255,
+              246,
+              208
+            ]
+          }
+        ],
+        "direction": "cold/dark to warm/bright",
+        "note": "The published mosaic is an 8-bit relative brightness product, not a calibrated kinetic-temperature grid."
+      }
+    },
+    {
+      "id": "tes-thermal-inertia",
+      "title": "TES Nighttime Thermal Inertia (Putzig et al. 2005)",
+      "url": "/terrain/layers/tes-thermal-inertia.webp",
+      "file": "frontend/public/terrain/layers/tes-thermal-inertia.webp",
+      "format": "webp",
+      "dimensions": [
+        7200,
+        3600
+      ],
+      "longitudeRange": [
+        -180,
+        180
+      ],
+      "latitudeRange": [
+        -90,
+        90
+      ],
+      "alpha": true,
+      "productType": "Thermal inertia (nighttime TES retrieval), colorized",
+      "source": "NASA/JPL/Arizona State University, MGS TES nighttime thermal inertia (Putzig et al. 2005)",
+      "sourceUrl": "https://www.mars.asu.edu/data/tes_putzigti/nighttime2005/",
+      "citation": "Putzig, N. E., M. T. Mellon, K. A. Kretke, and R. E. Arvidson (2005), Global thermal inertia and surface properties of Mars from the MGS mapping mission, Icarus 173, 325-341.",
+      "resolution": "20 ppd (~3 km/pixel) source",
+      "description": "Colorized global nighttime thermal inertia derived from MGS TES observations at 20 ppd (~3 km/pixel). This is thermal inertia, not a thermal-infrared brightness image.",
+      "attribution": "NASA/JPL/Arizona State University, MGS TES nighttime thermal inertia (Putzig et al. 2005)",
+      "outputSizeBytes": 9555358,
+      "webpQuality": 88,
+      "lossless": false,
+      "sourcePixelGrid": [
+        7200,
+        3600
+      ],
+      "noData": "exact/near-black source pixels made transparent"
+    },
+    {
+      "id": "mola-roughness",
+      "title": "MOLA Vertical Roughness",
+      "url": "/terrain/layers/mola-roughness.webp",
+      "file": "frontend/public/terrain/layers/mola-roughness.webp",
+      "format": "webp",
+      "dimensions": [
+        2880,
+        1440
+      ],
+      "longitudeRange": [
+        -180,
+        180
+      ],
+      "latitudeRange": [
+        -90,
+        90
+      ],
+      "alpha": false,
+      "productType": "MOLA vertical roughness RGB baseline composite",
+      "source": "MOLA vertical roughness composite, Kreslavsky & Head (2002); distributed by ASU Mars Global Data Sets",
+      "sourceUrl": "https://www.mars.asu.edu/data/mola_roughness/",
+      "citation": "M. A. Kreslavsky and J. W. Head III (2002), Mars: Nature and evolution of young latitude-dependent water-ice-rich mantle, Geophysical Research Letters 29.",
+      "resolution": "8 ppd (~7.5 km/pixel) source",
+      "description": "Red, green and blue composite of MOLA vertical roughness at 0.6 km, 2.4 km and 9.2 km baselines (8 ppd / ~7.5 km per pixel). Colors follow the published Kreslavsky & Head composite and are not a single scalar roughness ramp.",
+      "attribution": "MOLA vertical roughness composite, Kreslavsky & Head (2002); distributed by ASU Mars Global Data Sets",
+      "outputSizeBytes": 9558436,
+      "webpQuality": null,
+      "lossless": true,
+      "sourcePixelGrid": [
+        2880,
+        1440
+      ],
+      "noData": "none; published composite is globally filled"
+    },
+    {
+      "id": "tes-sheet-silicates",
+      "title": "TES Sheet Silicates / High-Silica Glass Abundance",
+      "url": "/terrain/layers/tes-sheet-silicates.webp",
+      "file": "frontend/public/terrain/layers/tes-sheet-silicates.webp",
+      "format": "webp",
+      "dimensions": [
+        1440,
+        720
+      ],
+      "longitudeRange": [
+        -180,
+        180
+      ],
+      "latitudeRange": [
+        -90,
+        90
+      ],
+      "alpha": true,
+      "productType": "TES colorized mineral abundance",
+      "source": "NASA/JPL/Arizona State University, MGS TES Sheet silicates / high-silica glass abundance (Bandfield 2002)",
+      "sourceUrl": "https://www.mars.asu.edu/data/tes_silicates/",
+      "citation": "Bandfield, J. L. (2002), Global mineral distributions on Mars, Journal of Geophysical Research 107.",
+      "resolution": "4 ppd (~16 km/pixel) source",
+      "description": "TES mineral-abundance map for sheet silicates and high-silica glass (4 ppd / ~16 km per pixel). This is a TES mineral indicator relevant to hydrated/glass-bearing materials; it is NOT a CRISM hydration product and is not labeled as one.",
+      "attribution": "NASA/JPL/Arizona State University, MGS TES Sheet silicates / high-silica glass abundance (Bandfield 2002)",
+      "outputSizeBytes": 765850,
+      "webpQuality": null,
+      "lossless": true,
+      "sourcePixelGrid": [
+        1440,
+        720
+      ],
+      "noData": "WMS alpha channel preserved"
+    },
+    {
+      "id": "tes-hematite",
+      "title": "TES Hematite Abundance",
+      "url": "/terrain/layers/tes-hematite.webp",
+      "file": "frontend/public/terrain/layers/tes-hematite.webp",
+      "format": "webp",
+      "dimensions": [
+        1440,
+        720
+      ],
+      "longitudeRange": [
+        -180,
+        180
+      ],
+      "latitudeRange": [
+        -90,
+        90
+      ],
+      "alpha": true,
+      "productType": "TES colorized mineral abundance",
+      "source": "NASA/JPL/Arizona State University, MGS TES Hematite abundance (Bandfield 2002)",
+      "sourceUrl": "https://www.mars.asu.edu/data/tes_hematite/",
+      "citation": "Bandfield, J. L. (2002), Global mineral distributions on Mars, Journal of Geophysical Research 107.",
+      "resolution": "4 ppd (~16 km/pixel) source",
+      "description": "TES mineral-abundance map for hematite (4 ppd / ~16 km per pixel). A distinct, scientifically labeled TES mineral product; not a CRISM hydrated-mineral map.",
+      "attribution": "NASA/JPL/Arizona State University, MGS TES Hematite abundance (Bandfield 2002)",
+      "outputSizeBytes": 342860,
+      "webpQuality": null,
+      "lossless": true,
+      "sourcePixelGrid": [
+        1440,
+        720
+      ],
+      "noData": "WMS alpha channel preserved"
+    }
+  ]
+}

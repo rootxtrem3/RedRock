@@ -29,18 +29,12 @@ import {
   locations,
   makeCoordinateLocation,
 } from './data/marsData'
+import { LAYER_DEFINITIONS, QUICK_LAYERS } from './data/layers'
 import { getTerrainPatch } from './data/terrain'
 import type { CameraAction, LayerId, MarsLocation, Station } from './types'
 
 type Drawer = 'sites' | 'stations' | 'layers' | null
 type RouteVariant = 'recommended' | 'shorter' | 'resource'
-
-const quickLayers: Array<[string, LayerId]> = [
-  ['Elevation', 'elevation'],
-  ['Thermal', 'thermal-inertia'],
-  ['Mineral', 'hydrated-minerals'],
-  ['Imagery', 'visual'],
-]
 
 function useReducedMotion() {
   const [reducedMotion, setReducedMotion] = useState(() =>
@@ -85,6 +79,7 @@ function App() {
     [stations],
   )
   const activeTerrainPatch = getTerrainPatch(selected?.id)
+  const activeLayer = LAYER_DEFINITIONS[layer]
 
   const handleGlobeReady = useCallback(() => setGlobeReady(true), [])
 
@@ -339,7 +334,7 @@ function App() {
           <div><strong>Mars orbital data</strong><span>LIVE DATASET 04</span></div>
         </div>
         <div className="quick-layers">
-          {quickLayers.map(([label, id]) => (
+          {QUICK_LAYERS.map(({ id, label }) => (
             <button
               type="button"
               key={id}
@@ -355,11 +350,31 @@ function App() {
         </button>
       </section>
 
+      {!drawer && layer !== 'visual' && activeLayer.legend && (
+        <section className="layer-readout" aria-label={`${activeLayer.label} legend`}>
+          <div className="layer-readout-head">
+            <span>ACTIVE DATASET</span>
+            <strong>{activeLayer.label}</strong>
+          </div>
+          <div
+            className="layer-readout-scale"
+            style={{
+              backgroundImage: `linear-gradient(90deg, ${activeLayer.legend.stops.join(', ')})`,
+            }}
+          />
+          <div className="layer-readout-labels">
+            <span>{activeLayer.legend.low}</span>
+            <span>{activeLayer.legend.high}</span>
+          </div>
+          <small>{activeLayer.legend.unit ?? activeLayer.resolution}</small>
+        </section>
+      )}
+
       <div className="compass-widget" aria-hidden="true">
         <span>N</span><i /><small>{selected ? 'TARGET' : 'ORBIT'}</small>
       </div>
 
-      {activeTerrainPatch && (
+      {activeTerrainPatch && (layer === 'visual' || layer === 'elevation') && (
         <div className="terrain-detail-indicator" aria-label="Local terrain resolution">
           <span />
           <div>
@@ -386,11 +401,19 @@ function App() {
         <div className="telemetry-center">
           <span />
           <strong>
-            {activeTerrainPatch && zoom >= 7
+            {activeTerrainPatch &&
+            (layer === 'visual' || layer === 'elevation') &&
+            zoom >= 7
               ? `THEMIS ${Math.round(activeTerrainPatch.imageryResolutionMeters)} M/PIX`
-              : layer.replaceAll('-', ' ').toUpperCase()}
+              : activeLayer.label.toUpperCase()}
           </strong>
-          <small>{activeTerrainPatch && zoom >= 7 ? 'LOCAL DETAIL' : 'RENDER ACTIVE'}</small>
+          <small>
+            {activeTerrainPatch &&
+            (layer === 'visual' || layer === 'elevation') &&
+            zoom >= 7
+              ? 'LOCAL DETAIL'
+              : activeLayer.note.toUpperCase()}
+          </small>
         </div>
         <div className="telemetry-source"><Database size={12} /><span>DATA</span><strong>MOLA / THEMIS / TES / CRISM</strong></div>
       </footer>

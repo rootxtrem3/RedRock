@@ -6,23 +6,121 @@
     21171
   ],
   "downloadBudgetBytes": 5368709120,
-  "plannedSourceBytes": 1158583420,
+  "plannedSourceBytes": 1258116220,
   "global": {
     "texture": "/terrain/global/viking-global.webp",
     "height": "/terrain/global/mola-height.png",
+    "elevation": "/terrain/global/mola-elevation.webp",
     "textureDimensions": [
       8192,
       4096
     ],
     "heightDimensions": [
-      4096,
-      2048
+      8192,
+      4096
     ],
-    "textureResolutionMeters": 920,
-    "heightResolutionMeters": 3705,
+    "textureResolutionMeters": 2600,
+    "heightResolutionMeters": 2600,
+    "heightSourcePixelsPerDegree": 32,
+    "elevationRamp": {
+      "minMeters": -8177,
+      "maxMeters": 21171,
+      "stops": [
+        {
+          "meters": -8177,
+          "rgb": [
+            12,
+            31,
+            63
+          ]
+        },
+        {
+          "meters": -6000,
+          "rgb": [
+            24,
+            62,
+            110
+          ]
+        },
+        {
+          "meters": -4000,
+          "rgb": [
+            36,
+            100,
+            146
+          ]
+        },
+        {
+          "meters": -2000,
+          "rgb": [
+            62,
+            140,
+            150
+          ]
+        },
+        {
+          "meters": 0,
+          "rgb": [
+            120,
+            165,
+            135
+          ]
+        },
+        {
+          "meters": 2000,
+          "rgb": [
+            176,
+            178,
+            133
+          ]
+        },
+        {
+          "meters": 4000,
+          "rgb": [
+            203,
+            166,
+            108
+          ]
+        },
+        {
+          "meters": 7000,
+          "rgb": [
+            190,
+            123,
+            80
+          ]
+        },
+        {
+          "meters": 11000,
+          "rgb": [
+            166,
+            79,
+            57
+          ]
+        },
+        {
+          "meters": 16000,
+          "rgb": [
+            198,
+            112,
+            86
+          ]
+        },
+        {
+          "meters": 21171,
+          "rgb": [
+            244,
+            235,
+            221
+          ]
+        }
+      ],
+      "reliefShading": "northwest, 45 degree sun, subtle"
+    },
     "sources": [
       "NASA Viking Orbiter merged color mosaic / ASU",
-      "NASA MGS MOLA MEGDR v2.0 / PDS Geosciences Node"
+      "NASA MGS MOLA MEGDR v2.0 (32 ppd global) / PDS Geosciences Node",
+      "MOLA-derived hypsometric colorization and relief shading"
     ]
   },
   "patches": {
@@ -36,6 +134,7 @@
       },
       "texture": "/terrain/patches/jezero/themis.webp",
       "height": "/terrain/patches/jezero/mola-height.png",
+      "elevation": "/terrain/patches/jezero/mola-elevation.webp",
       "imageryResolutionMeters": 231.55,
       "elevationResolutionMeters": 463.1,
       "textureDimensions": [
@@ -61,6 +160,7 @@
       },
       "texture": "/terrain/patches/gale/themis.webp",
       "height": "/terrain/patches/gale/mola-height.png",
+      "elevation": "/terrain/patches/gale/mola-elevation.webp",
       "imageryResolutionMeters": 231.55,
       "elevationResolutionMeters": 463.1,
       "textureDimensions": [
@@ -86,6 +186,7 @@
       },
       "texture": "/terrain/patches/elysium/themis.webp",
       "height": "/terrain/patches/elysium/mola-height.png",
+      "elevation": "/terrain/patches/elysium/mola-elevation.webp",
       "imageryResolutionMeters": 231.55,
       "elevationResolutionMeters": 463.1,
       "textureDimensions": [
@@ -111,6 +212,7 @@
       },
       "texture": "/terrain/patches/olympus/themis.webp",
       "height": "/terrain/patches/olympus/mola-height.png",
+      "elevation": "/terrain/patches/olympus/mola-elevation.webp",
       "imageryResolutionMeters": 231.55,
       "elevationResolutionMeters": 463.1,
       "textureDimensions": [
@@ -136,6 +238,7 @@
       },
       "texture": "/terrain/patches/valles/themis.webp",
       "height": "/terrain/patches/valles/mola-height.png",
+      "elevation": "/terrain/patches/valles/mola-elevation.webp",
       "imageryResolutionMeters": 231.55,
       "elevationResolutionMeters": 463.1,
       "textureDimensions": [

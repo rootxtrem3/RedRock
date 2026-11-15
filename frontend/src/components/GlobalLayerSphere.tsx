@@ -6,12 +6,8 @@ import {
   type ReactNode,
 } from 'react'
 import { useLoader, useThree } from '@react-three/fiber'
-import {
-  MathUtils,
-  NoColorSpace,
-  SRGBColorSpace,
-  TextureLoader,
-} from 'three'
+import { MathUtils, SRGBColorSpace, TextureLoader } from 'three'
+import { sharedHeightTexture } from '../data/textureCache'
 import {
   MARS_MEAN_RADIUS_METERS,
   MOLA_ELEVATION_MAX_METERS,
@@ -60,7 +56,10 @@ const DEFAULT_LAYER_OPACITY: Record<string, number> = {
 function layerMayUseAlpha(layerId: string) {
   const id = layerId.toLowerCase()
   return (
-    id.includes('mineral') || id.includes('thermal') || id.includes('temperature')
+    id.includes('mineral') ||
+    id.includes('thermal') ||
+    id.includes('temperature') ||
+    id.includes('hematite')
   )
 }
 
@@ -109,17 +108,16 @@ function LayerSphereSurface({
     return configured
   }, [gl, sourceTexture])
 
-  const height = useMemo(() => {
-    if (!heightUrl) return null
-    const configured = sourceHeight.clone()
-    configured.colorSpace = NoColorSpace
-    configured.anisotropy = Math.min(4, gl.capabilities.getMaxAnisotropy())
-    configured.needsUpdate = true
-    return configured
-  }, [gl, heightUrl, sourceHeight])
+  // Every overlay shares one configured 8K MOLA height texture.
+  const height = useMemo(
+    () =>
+      heightUrl
+        ? sharedHeightTexture(sourceHeight, gl.capabilities.getMaxAnisotropy())
+        : null,
+    [gl, heightUrl, sourceHeight],
+  )
 
   useEffect(() => () => texture.dispose(), [texture])
-  useEffect(() => () => height?.dispose(), [height])
 
   const usesAlpha = layerMayUseAlpha(layerId)
   const effectiveOpacity = MathUtils.clamp(
@@ -135,7 +133,7 @@ function LayerSphereSurface({
     <mesh renderOrder={1}>
       {/* Full-sphere UVs, identical to MarsSurface: 0..2π longitude, 0..π latitude. */}
       <sphereGeometry
-        args={[surfaceRadius, 256, 128, 0, Math.PI * 2, 0, Math.PI]}
+        args={[surfaceRadius, 384, 192, 0, Math.PI * 2, 0, Math.PI]}
       />
       <meshStandardMaterial
         map={texture}

@@ -2,21 +2,26 @@
 """Download and prepare global scientific Mars layer textures for the globe.
 
 The script uses the Arizona State University Mars Global Data Sets archive and
-keeps a hard aggregate download budget of five GiB, measured from the actual
-size of ``data/mars/raw`` plus planned HTTP Content-Length values before any
-transfer starts.  Products that cannot be fetched without crossing the budget
-are reduced (optional layers first, then THEMIS tiles) or the run fails with a
+the ASU JMARS Web Map Service, and keeps a hard aggregate download budget of
+five GiB, measured from the actual size of ``data/mars/raw`` plus planned HTTP
+Content-Length values before any transfer starts.  Optional products are
+dropped first if a plan would cross the budget; otherwise the run fails with a
 clear error.
 
+The THEMIS Day IR mosaic is requested as eight 4096x1024 WMS cells instead of
+the 72 published 256 ppd PNG tiles.  The cells stitch into the same 8K
+equirectangular texture, cut the download from ~2.2 GiB to ~30 MiB, and avoid
+the combined ~92160x46080 pixel decode that the tiled route required.
+
 Prepared browser assets (all equirectangular, -180..180 east-positive):
-  * THEMIS Day IR global mosaic, 8192x4096 WebP with transparent gores
-  * TES nighttime thermal inertia (Putzig et al. 2005), 4096x2048 WebP
+  * THEMIS Day IR global mosaic, 8192x4096 colorized thermal WebP with
+    transparent gores
+  * TES nighttime thermal inertia (Putzig et al. 2005), 7200x3600 WebP
   * MOLA vertical roughness (Kreslavsky & Head 2002), 2880x1440 WebP
   * TES hematite abundance (Bandfield 2002), 1440x720 WebP
   * TES sheet-silicate / high-silica-glass abundance (Bandfield 2002)
 
-Raw source products are stored under ``data/mars/raw/layers``; the existing
-THEMIS 30x30-degree tiles under ``data/mars/raw/themis`` are reused.
+Raw source products are stored under ``data/mars/raw/layers``.
 """
 
 from __future__ import annotations
@@ -43,21 +48,35 @@ RAW_DIR = ROOT / "data" / "mars" / "raw"
 LAYER_RAW_DIR = RAW_DIR / "layers"
 PUBLIC_DIR = ROOT / "frontend" / "public" / "terrain" / "layers"
 MAX_DOWNLOAD_BYTES = 5 * 1024**3
-MAX_OUTPUT_BYTES = 8 * 1024**2
+MAX_OUTPUT_BYTES = 12 * 1024**2
 
 ASU_DATA = "https://www.mars.asu.edu/data"
 ASU_WMS = "https://ms-mars.mars.asu.edu"
 
-# THEMIS Day IR Global Mosaic v2.0: 12 longitude x 6 latitude tiles of 30x30
-# degrees at 256 ppd, published in 0..360 east longitude order.  A texture in
-# -180..180 order starts with the 180..210 E tile.
-THEMIS_LAT_BANDS = ("N60", "N30", "N00", "N-30", "N-60", "N-90")
-THEMIS_TEXTURE_LONGITUDES = (180, 210, 240, 270, 300, 330, 0, 30, 60, 90, 120, 150)
-THEMIS_TILE_COUNT = len(THEMIS_LAT_BANDS) * len(THEMIS_TEXTURE_LONGITUDES)
-
+# THEMIS Day IR Global Mosaic v2.0 (256 ppd, 92160x46080) is served by the
+# JMARS WMS as the ``THEMIS_day_IR`` layer.  Requests larger than ~4.2
+# megapixels are rejected or truncated by the service, so the 8K texture is
+# assembled from a 2x4 grid of 90x45-degree cells at 4096x1024 each.
 DAY_IR_TARGET = (8192, 4096)
-THERMAL_INERTIA_TARGET = (4096, 2048)
+DAY_IR_CELL_SIZE = (4096, 1024)
+DAY_IR_GRID = (2, 4)  # longitude columns, latitude rows
+DAY_IR_LON_STEP = 360 / DAY_IR_GRID[0]
+DAY_IR_LAT_STEP = 180 / DAY_IR_GRID[1]
+THERMAL_INERTIA_TARGET = (7200, 3600)  # native 20 ppd source grid
 MINERAL_WMS_SIZE = (1440, 720)
+
+# Perceptual thermal ramp used for THEMIS Day IR brightness. It runs from
+# cold/night-side indigo through magenta and red into warm orange and pale
+# yellow, so relative daytime surface heating is readable at a glance.
+THERMAL_RAMP: tuple[tuple[float, tuple[int, int, int]], ...] = (
+    (0.00, (9, 8, 28)),
+    (0.15, (43, 17, 70)),
+    (0.32, (107, 28, 82)),
+    (0.50, (178, 49, 58)),
+    (0.68, (231, 98, 39)),
+    (0.84, (250, 176, 66)),
+    (1.00, (255, 246, 208)),
+)
 
 USER_AGENT = (
     "Red-Rock-Martian-Survival-Guide/1.0 "
@@ -65,7 +84,8 @@ USER_AGENT = (
 )
 
 _THREAD_LOCAL = threading.local()
-_PRINT_LOCK = threading.Lock()
+# Reentrant: download_source holds it while updating the counter and logging.
+_PRINT_LOCK = threading.RLock()
 
 
 def log(message: str) -> None:
@@ -80,6 +100,35 @@ def human_size(size: int | float) -> str:
             return f"{value:.2f} {unit}"
         value /= 1024
     return f"{value:.2f} GiB"
+
+
+def thermal_lookup_table() -> np.ndarray:
+    """256-entry RGB lookup table for the THEMIS Day IR thermal ramp."""
+    positions = np.array([stop[0] for stop in THERMAL_RAMP], dtype=np.float32)
+    values = np.linspace(0.0, 1.0, 256, dtype=np.float32)
+    channels = []
+    for channel in range(3):
+        colors = np.array(
+            [stop[1][channel] for stop in THERMAL_RAMP], dtype=np.float32
+        )
+        channels.append(np.interp(values, positions, colors))
+    return np.stack(channels, axis=1)
+
+
+def colorize_thermal(image: Image.Image) -> Image.Image:
+    """Colorize a grayscale Day IR mosaic while preserving no-data areas.
+
+    The published tiles carry transparency, but the JMARS WMS cells flatten
+    the gores to black.  Near-black pixels therefore become transparent too,
+    matching the published mosaic's no-data behavior.
+    """
+    rgba = np.asarray(image.convert("RGBA"), dtype=np.uint8)
+    table = thermal_lookup_table()
+    gray = rgba[..., 0]
+    rgb = table[gray].astype(np.uint8)
+    alpha = np.where((rgba[..., 3] > 0) & (gray > 4), 255, 0).astype(np.uint8)
+    rgb[alpha == 0] = 0
+    return Image.fromarray(np.dstack((rgb, alpha)).astype(np.uint8), "RGBA")
 
 
 def session() -> requests.Session:
@@ -114,61 +163,48 @@ class Source:
         return RAW_DIR / self.relative_path
 
 
-def themis_tile_name(lat_band: str, longitude_east: int) -> str:
-    return f"thm_dir_{lat_band}_{longitude_east:03d}.png"
-
-
-def themis_reduction_order() -> list[tuple[str, int]]:
-    """Balanced order used only if the download budget forces tile reduction.
-
-    Existing cached tiles are moved to the front by ``build_sources``.  The
-    remaining tiles are ordered even-row/even-column first so a reduced plan
-    still samples the globe uniformly instead of leaving one hemisphere empty.
-    """
-    order: list[tuple[str, int]] = []
-    for parity in ((0, 0), (0, 1), (1, 0), (1, 1)):
-        for row, band in enumerate(THEMIS_LAT_BANDS):
-            for col, longitude in enumerate(THEMIS_TEXTURE_LONGITUDES):
-                if (row % 2, col % 2) == parity:
-                    order.append((band, longitude))
-    return order
+def day_ir_wms_url(row: int, col: int) -> str:
+    west = -180 + col * DAY_IR_LON_STEP
+    east = west + DAY_IR_LON_STEP
+    north = 90 - row * DAY_IR_LAT_STEP
+    south = north - DAY_IR_LAT_STEP
+    width, height = DAY_IR_CELL_SIZE
+    return (
+        f"{ASU_WMS}/THEMIS_day_IR?SERVICE=WMS&REQUEST=GetMap"
+        f"&FORMAT=image/png&WIDTH={width}&HEIGHT={height}"
+        f"&SRS=JMARS:4&BBOX={west},{south},{east},{north}"
+        "&STYLES=&VERSION=1.1.1&LAYERS=THEMIS_day_IR"
+    )
 
 
 def build_sources() -> list[Source]:
     sources: list[Source] = []
-    existing_tiles = {
-        path.name for path in (RAW_DIR / "themis").glob("thm_dir_*.png")
-    } if (RAW_DIR / "themis").is_dir() else set()
 
-    # Existing tiles get first priority so they are never discarded by a
-    # budget reduction, and so a preview run can use them immediately.
-    ordered_tiles = [
-        item
-        for item in themis_reduction_order()
-        if themis_tile_name(*item) in existing_tiles
-    ]
-    ordered_tiles.extend(
-        item
-        for item in themis_reduction_order()
-        if themis_tile_name(*item) not in existing_tiles
-    )
-
-    for index, (lat_band, longitude) in enumerate(ordered_tiles):
-        filename = themis_tile_name(lat_band, longitude)
-        sources.append(
-            Source(
-                key=f"themis-day-ir:{filename}",
-                url=f"{ASU_DATA}/thm_dir/large/{filename}",
-                relative_path=f"themis/{filename}",
-                kind="themis",
-                label=f"THEMIS Day IR tile {lat_band} / {longitude:03d}E",
-                planned_bytes=0,
-                exact_size=True,
-                required=True,
-                priority=index,
-                page_url="https://www.mars.asu.edu/data/thm_dir",
+    # JMARS WMS responses do not publish a reliable Content-Length.  Reserve
+    # the uncompressed gray+alpha size as a conservative upper bound.
+    day_ir_bound = DAY_IR_CELL_SIZE[0] * DAY_IR_CELL_SIZE[1] * 2 + 64 * 1024
+    for row in range(DAY_IR_GRID[1]):
+        for col in range(DAY_IR_GRID[0]):
+            north = 90 - row * DAY_IR_LAT_STEP
+            west = -180 + col * DAY_IR_LON_STEP
+            sources.append(
+                Source(
+                    key=f"themis-day-ir:{row}:{col}",
+                    url=day_ir_wms_url(row, col),
+                    relative_path=f"layers/themis_day_ir_{row}_{col}.png",
+                    kind="day-ir",
+                    label=(
+                        "THEMIS Day IR cell "
+                        f"{north:.0f}..{north - DAY_IR_LAT_STEP:.0f}N / "
+                        f"{west:.0f}..{west + DAY_IR_LON_STEP:.0f}E"
+                    ),
+                    planned_bytes=day_ir_bound,
+                    exact_size=False,
+                    required=True,
+                    priority=row * DAY_IR_GRID[0] + col,
+                    page_url="https://www.mars.asu.edu/data/thm_dir/",
+                )
             )
-        )
 
     sources.append(
         Source(
@@ -198,7 +234,7 @@ def build_sources() -> list[Source]:
             exact_size=True,
             required=True,
             priority=6,
-            page_url="https://www.mars.asu.edu/data/mola_roughness",
+            page_url="https://www.mars.asu.edu/data/mola_roughness/",
         )
     )
 
@@ -214,16 +250,16 @@ def build_sources() -> list[Source]:
             "TES sheet silicates / high-silica glass abundance (4 ppd)",
             True,
             10,
-            "https://www.mars.asu.edu/data/tes_silicates",
+            "https://www.mars.asu.edu/data/tes_silicates/",
         ),
         (
             "tes-hematite",
             "TES_Hematite",
             "layers/tes_hematite_4ppd.png",
             "TES hematite abundance (4 ppd)",
-            False,
+            True,
             20,
-            "https://www.mars.asu.edu/data/tes_hematite",
+            "https://www.mars.asu.edu/data/tes_hematite/",
         ),
     ]
     for layer_id, wms_layer, relative_path, label, required, priority, page in mineral_products:
@@ -312,8 +348,9 @@ def reduce_plan(
 ) -> list[Source]:
     """Return a plan that fits the budget, or fail clearly.
 
-    Optional mineral layers are removed first, then THEMIS tiles are reduced
-    in the balanced order.  Existing cached tiles are never dropped.
+    Optional mineral layers are removed first.  The remaining products are all
+    required for a complete global view, so the run fails rather than shipping
+    a partly empty thermal or terrain texture.
     """
     planned = sum(source.planned_bytes for source in sources)
     if used_bytes + planned <= budget:
@@ -338,49 +375,10 @@ def reduce_plan(
         if used_bytes + planned <= budget:
             return kept
 
-    # Reduce THEMIS tiles.  Cached tiles (priority 0..n) stay in the plan.
-    themis = [item for item in kept if item.kind == "themis"]
-    non_themis_bytes = sum(
-        item.planned_bytes for item in kept if item.kind != "themis"
+    raise RuntimeError(
+        f"Required products still need {human_size(used_bytes + planned)}, "
+        f"above the {human_size(budget)} download budget"
     )
-    available_for_themis = budget - used_bytes - non_themis_bytes
-    if available_for_themis <= 0:
-        raise RuntimeError(
-            "Even the non-THEMIS layer set exceeds the five-GiB download budget"
-        )
-
-    selected_themis: list[Source] = []
-    spent = 0
-    for source in sorted(themis, key=lambda item: item.priority):
-        if spent + source.planned_bytes <= available_for_themis:
-            selected_themis.append(source)
-            spent += source.planned_bytes
-        elif source.destination.exists():
-            # Cached tiles are already counted in used_bytes; keep them in the
-            # processing plan even if their nominal size would not fit a new
-            # download reservation.
-            selected_themis.append(source)
-
-    if not selected_themis:
-        raise RuntimeError(
-            "No THEMIS tiles fit the five-GiB download budget; refusing to "
-            "create an empty thermal texture"
-        )
-
-    kept = [item for item in kept if item.kind != "themis"] + selected_themis
-    kept.sort(key=lambda item: (item.kind, item.priority))
-    new_plan = sum(item.planned_bytes for item in kept)
-    if used_bytes + new_plan > budget:
-        raise RuntimeError(
-            f"Reduced plan still needs {human_size(used_bytes + new_plan)}, "
-            f"above the five-GiB budget"
-        )
-    log(
-        f"[budget] Reduced THEMIS tiles from {len(themis)} to "
-        f"{len(selected_themis)}; new plan "
-        f"{human_size(used_bytes + new_plan)}."
-    )
-    return kept
 
 
 def download_source(
@@ -394,7 +392,7 @@ def download_source(
         size = destination.stat().st_size
         if exact_size and size == expected:
             return "cached"
-        if not exact_size and size <= max_size and _is_png(destination):
+        if not exact_size and size <= max_size and _is_complete_png(destination):
             return "cached"
 
     partial = destination.with_suffix(destination.suffix + ".part")
@@ -428,9 +426,11 @@ def download_source(
                         f"{source.key} exceeded its conservative WMS bound: "
                         f"{human_size(actual)} > {human_size(max_size)}"
                     )
-                if not _is_png(partial):
+                if not _is_complete_png(partial):
                     partial.unlink(missing_ok=True)
-                    raise RuntimeError(f"{source.key} did not return a PNG image")
+                    raise RuntimeError(
+                        f"{source.key} did not return a complete PNG image"
+                    )
 
             partial.replace(destination)
             with _PRINT_LOCK:
@@ -448,11 +448,23 @@ def download_source(
     raise RuntimeError(f"Failed to download {source.key}: {last_error}")
 
 
-def _is_png(path: Path) -> bool:
+def _is_complete_png(path: Path) -> bool:
+    """Validate the PNG signature, chunk CRCs, and end-of-file marker.
+
+    The JMARS WMS occasionally returns HTTP 200 with a truncated image, so a
+    signature check alone is not enough before a partial download is promoted
+    to its final name.
+    """
     try:
         with path.open("rb") as handle:
-            return handle.read(8) == b"\x89PNG\r\n\x1a\n"
-    except OSError:
+            if handle.read(8) != b"\x89PNG\r\n\x1a\n":
+                return False
+        with Image.open(path) as image:
+            image.verify()
+        with Image.open(path) as image:
+            image.load()
+        return True
+    except (OSError, ValueError):
         return False
 
 
@@ -497,59 +509,61 @@ def _is_cached(source: Source) -> bool:
         return False
     if source.exact_size:
         return destination.stat().st_size == source.planned_bytes
-    return destination.stat().st_size <= source.planned_bytes and _is_png(destination)
+    return destination.stat().st_size <= source.planned_bytes and _is_complete_png(
+        destination
+    )
 
 
 def prepare_day_ir(sources: Sequence[Source]) -> tuple[Image.Image, dict[str, object]]:
-    """Mosaic the THEMIS 30x30-degree tiles into a -180..180 RGBA texture.
+    """Stitch the ASU JMARS WMS cells into a -180..180 RGBA texture.
 
-    Tiles are grayscale; zero-valued pixels are the published no-data gores.
-    They are converted to transparency.  Missing tiles stay transparent.
+    The WMS returns gray+alpha PNGs. Zero-alpha pixels are the published
+    no-data gores and stay transparent. Missing or unreadable cells also stay
+    transparent so a partial run still produces a usable texture.
     """
-    selected = {source.relative_path for source in sources if source.kind == "themis"}
+    selected = {
+        source.relative_path for source in sources if source.kind == "day-ir"
+    }
     width, height = DAY_IR_TARGET
+    cell_width, cell_height = DAY_IR_CELL_SIZE
     mosaic = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     used: list[str] = []
     missing: list[str] = []
 
-    for row, lat_band in enumerate(THEMIS_LAT_BANDS):
-        for col, longitude in enumerate(THEMIS_TEXTURE_LONGITUDES):
-            filename = themis_tile_name(lat_band, longitude)
-            relative = f"themis/{filename}"
-            left = round(col * width / len(THEMIS_TEXTURE_LONGITUDES))
-            right = round((col + 1) * width / len(THEMIS_TEXTURE_LONGITUDES))
-            top = round(row * height / len(THEMIS_LAT_BANDS))
-            bottom = round((row + 1) * height / len(THEMIS_LAT_BANDS))
+    for row in range(DAY_IR_GRID[1]):
+        for col in range(DAY_IR_GRID[0]):
+            relative = f"layers/themis_day_ir_{row}_{col}.png"
             path = RAW_DIR / relative
             if relative not in selected or not path.exists():
-                missing.append(filename)
+                missing.append(relative)
                 continue
 
-            # Decode only the single-band source and resize it before creating
-            # the RGBA tile.  This keeps peak memory low on an 8 GiB host.
             with Image.open(path) as source:
-                gray = source.convert("L")
-                resized = gray.resize(
-                    (right - left, bottom - top), Image.Resampling.LANCZOS
-                )
-                alpha = resized.point(lambda value: 255 if value > 0 else 0)
-                tile = Image.merge("RGBA", (resized, resized, resized, alpha))
-                mosaic.paste(tile, (left, top), tile)
+                tile = source.convert("RGBA")
+                if tile.size != DAY_IR_CELL_SIZE:
+                    tile = tile.resize(
+                        DAY_IR_CELL_SIZE, Image.Resampling.LANCZOS
+                    )
+                mosaic.paste(tile, (col * cell_width, row * cell_height), tile)
                 tile.close()
-                alpha.close()
-                resized.close()
-            used.append(filename)
+            used.append(relative)
 
     log(
-        f"[prepare] THEMIS Day IR: {len(used)}/{THEMIS_TILE_COUNT} tiles, "
-        f"{len(missing)} transparent tile gaps"
+        f"[prepare] THEMIS Day IR: {len(used)}/{DAY_IR_GRID[0] * DAY_IR_GRID[1]} "
+        f"WMS cells, {len(missing)} transparent cell gaps"
     )
     coverage = {
-        "tileGrid": "12 longitude x 6 latitude, 30x30 degree tiles",
-        "tilesUsed": len(used),
-        "tilesMissing": len(missing),
-        "missingTileNames": missing,
-        "sourcePixelGrid": [92160, 46080],
+        "cellGrid": (
+            f"{DAY_IR_GRID[0]} longitude x {DAY_IR_GRID[1]} latitude, "
+            f"{DAY_IR_LON_STEP:.0f}x{DAY_IR_LAT_STEP:.0f} degree cells"
+        ),
+        "cellsUsed": len(used),
+        "cellsMissing": len(missing),
+        "missingCellNames": missing,
+        "sourcePixelGrid": list(DAY_IR_TARGET),
+        "sourceMosaicPixelGrid": [92160, 46080],
+        "sourceMosaicResolution": "256 ppd (~231 m/pixel)",
+        "wmsCellPixels": list(DAY_IR_CELL_SIZE),
     }
     return mosaic, coverage
 
@@ -602,8 +616,16 @@ def save_bounded(
     image: Image.Image,
     output: Path,
     max_bytes: int = MAX_OUTPUT_BYTES,
+    lossless: bool = False,
+    quality: int = 88,
 ) -> dict[str, object]:
-    """Save WebP under ``max_bytes``, reducing quality then dimensions."""
+    """Save WebP under ``max_bytes``, reducing quality then dimensions.
+
+    ``lossless`` keeps published color values exact for small products whose
+    palette must stay faithful (the mineral abundance maps and the roughness
+    composite). Large textures stay lossy and step down quality and dimensions
+    until they fit the per-file budget.
+    """
     output.parent.mkdir(parents=True, exist_ok=True)
     candidates: list[tuple[Image.Image, float]] = [(image, 1.0)]
     for scale in (0.75, 0.5, 0.375, 0.25):
@@ -620,27 +642,42 @@ def save_bounded(
             )
         )
 
+    quality_ladder = [quality]
+    for step in (82, 76, 70, 64, 58):
+        if step < quality:
+            quality_ladder.append(step)
+
     for candidate, scale in candidates:
-        for quality in (88, 82, 76, 70, 64, 58):
+        attempts: list[dict[str, object]] = []
+        if lossless:
+            attempts.append({"lossless": True, "method": 4})
+        attempts.extend(
+            {"quality": value, "method": 4} for value in quality_ladder
+        )
+        for options in attempts:
             buffer = io.BytesIO()
-            options = {"format": "WEBP", "quality": quality, "method": 4}
+            encode = {"format": "WEBP", **options}
             if candidate.mode == "RGBA":
-                options["exact"] = True
-            candidate.save(buffer, **options)
+                encode["exact"] = True
+            candidate.save(buffer, **encode)
             data = buffer.getvalue()
             if len(data) <= max_bytes:
                 output.write_bytes(data)
                 if candidate is not image:
                     candidate.close()
+                label = "lossless" if options.get("lossless") else (
+                    f"q={options['quality']}"
+                )
                 log(
                     f"[write] {output.relative_to(ROOT)} "
                     f"{candidate.size[0]}x{candidate.size[1]} "
-                    f"q={quality} {human_size(len(data))}"
+                    f"{label} {human_size(len(data))}"
                 )
                 return {
                     "dimensions": [candidate.size[0], candidate.size[1]],
                     "bytes": len(data),
-                    "webpQuality": quality,
+                    "webpQuality": options.get("quality"),
+                    "lossless": bool(options.get("lossless")),
                     "downscale": scale,
                 }
         if candidate is not image:
@@ -710,6 +747,7 @@ def layer_record(
         "attribution": source,
         "outputSizeBytes": save_result["bytes"],
         "webpQuality": save_result["webpQuality"],
+        "lossless": bool(save_result.get("lossless", False)),
     }
     if extra:
         record.update(extra)
@@ -726,17 +764,8 @@ def main() -> int:
     parser.add_argument(
         "--jobs",
         type=int,
-        default=8,
-        help="Parallel download workers (default: 8)",
-    )
-    parser.add_argument(
-        "--limit-themis-tiles",
-        type=int,
-        default=None,
-        help=(
-            "Use at most N THEMIS tiles, preferring already-downloaded tiles. "
-            "Intended for preview/test runs; gaps remain transparent."
-        ),
+        default=4,
+        help="Parallel download workers (default: 4)",
     )
     args = parser.parse_args()
 
@@ -745,18 +774,6 @@ def main() -> int:
     print(f"Hard five-GiB budget:     {human_size(MAX_DOWNLOAD_BYTES)}")
 
     sources = build_sources()
-    if args.limit_themis_tiles is not None:
-        themis = [item for item in sources if item.kind == "themis"]
-        other = [item for item in sources if item.kind != "themis"]
-        if args.limit_themis_tiles < 1:
-            raise RuntimeError("--limit-themis-tiles must be at least 1")
-        # build_sources already puts cached tiles first.
-        sources = other + themis[: args.limit_themis_tiles]
-        print(
-            f"[limit] Using {min(args.limit_themis_tiles, len(themis))} "
-            f"of {THEMIS_TILE_COUNT} THEMIS tiles (preview mode)."
-        )
-
     resolve_sizes(sources, args.jobs)
     sources = reduce_plan(sources, initial_raw, MAX_DOWNLOAD_BYTES)
 
@@ -787,8 +804,27 @@ def main() -> int:
     records: list[dict[str, object]] = []
 
     day_ir, day_ir_extra = prepare_day_ir(sources)
-    day_ir_result = save_bounded(day_ir, PUBLIC_DIR / "themis-day-ir.webp")
+    colorized_day_ir = colorize_thermal(day_ir)
     day_ir.close()
+    day_ir_result = save_bounded(
+        colorized_day_ir, PUBLIC_DIR / "themis-day-ir.webp"
+    )
+    colorized_day_ir.close()
+    day_ir_extra = {
+        **day_ir_extra,
+        "valueMeaning": "relative daytime 12.57 micrometre brightness temperature",
+        "thermalRamp": {
+            "stops": [
+                {"value": value, "rgb": list(rgb)}
+                for value, rgb in THERMAL_RAMP
+            ],
+            "direction": "cold/dark to warm/bright",
+            "note": (
+                "The published mosaic is an 8-bit relative brightness product, "
+                "not a calibrated kinetic-temperature grid."
+            ),
+        },
+    }
     records.append(
         layer_record(
             "themis-day-ir",
@@ -796,14 +832,15 @@ def main() -> int:
             (
                 "Daytime thermal infrared (12.57 micrometre) brightness "
                 "mosaic from Mars Odyssey THEMIS. The published global mosaic "
-                "is 256 ppd; this browser texture is a full-globe downsample. "
-                "Zero-valued no-data gores and unavailable tiles are transparent."
+                "is 256 ppd; this browser texture is an 8K equirectangular "
+                "colorized resample assembled from ASU JMARS WMS cells. "
+                "No-data gores and unavailable cells are transparent."
             ),
             (
                 "NASA/JPL-Caltech/Arizona State University, Mars Odyssey "
                 "THEMIS Day IR Global Mosaic v2.0 (ASU Mars Global Data Sets)"
             ),
-            "https://www.mars.asu.edu/data/thm_dir",
+            "https://www.mars.asu.edu/data/thm_dir/",
             (
                 "THEMIS Day IR Global Mosaic v2.0, ASU Mars Global Data Sets; "
                 "NASA Mars Odyssey THEMIS daytime infrared (12.57 micrometre)."
@@ -849,7 +886,7 @@ def main() -> int:
 
     roughness, roughness_extra = prepare_roughness()
     roughness_result = save_bounded(
-        roughness, PUBLIC_DIR / "mola-roughness.webp", alpha=False
+        roughness, PUBLIC_DIR / "mola-roughness.webp", lossless=True
     )
     roughness.close()
     records.append(
@@ -866,7 +903,7 @@ def main() -> int:
                 "MOLA vertical roughness composite, Kreslavsky & Head (2002); "
                 "distributed by ASU Mars Global Data Sets"
             ),
-            "https://www.mars.asu.edu/data/mola_roughness",
+            "https://www.mars.asu.edu/data/mola_roughness/",
             (
                 "M. A. Kreslavsky and J. W. Head III (2002), Mars: Nature and "
                 "evolution of young latitude-dependent water-ice-rich mantle, "
@@ -890,7 +927,7 @@ def main() -> int:
                 "indicator relevant to hydrated/glass-bearing materials; it is "
                 "NOT a CRISM hydration product and is not labeled as one."
             ),
-            "https://www.mars.asu.edu/data/tes_silicates",
+            "https://www.mars.asu.edu/data/tes_silicates/",
             "Sheet silicates / high-silica glass",
             "layers/tes_sheet_silicates_4ppd.png",
         ),
@@ -902,7 +939,7 @@ def main() -> int:
                 "pixel). A distinct, scientifically labeled TES mineral "
                 "product; not a CRISM hydrated-mineral map."
             ),
-            "https://www.mars.asu.edu/data/tes_hematite",
+            "https://www.mars.asu.edu/data/tes_hematite/",
             "Hematite",
             "layers/tes_hematite_4ppd.png",
         ),
@@ -919,7 +956,7 @@ def main() -> int:
             RAW_DIR / relative_path, title
         )
         mineral_result = save_bounded(
-            mineral, PUBLIC_DIR / f"{layer_id}.webp"
+            mineral, PUBLIC_DIR / f"{layer_id}.webp", lossless=True
         )
         mineral.close()
         records.append(

@@ -8,9 +8,11 @@ transfer begins.
 
 Prepared browser assets:
   * 8192x4096 Viking global color mosaic (64 ppd source)
-  * 4096x2048 MOLA global topography map (16 ppd source)
+  * 8192x4096 MOLA global topography map (32 ppd source)
+  * 8192x4096 colorized MOLA elevation layer with relief shading
   * 6x6 degree THEMIS Day IR detail patches (256 ppd / ~232 m per pixel)
-  * matching MOLA topography patches (128 ppd / ~463 m per pixel)
+  * matching MOLA topography and colorized elevation patches
+    (128 ppd / ~463 m per pixel)
 """
 
 from __future__ import annotations
@@ -33,6 +35,25 @@ PUBLIC_DIR = ROOT / "frontend" / "public" / "terrain"
 MAX_DOWNLOAD_BYTES = 5 * 1024**3
 MOLA_MIN_METERS = -8177
 MOLA_MAX_METERS = 21171
+GLOBAL_TEXTURE_SIZE = (8192, 4096)
+GLOBAL_HEIGHT_SIZE = (8192, 4096)
+MARS_MEAN_RADIUS_METERS = 3_389_500
+MARS_MEAN_CIRCUMFERENCE_METERS = 21_296_000
+
+# Hypsometric ramp shared with the frontend legend (value, RGB).
+ELEVATION_RAMP: tuple[tuple[float, tuple[int, int, int]], ...] = (
+    (-8177, (12, 31, 63)),
+    (-6000, (24, 62, 110)),
+    (-4000, (36, 100, 146)),
+    (-2000, (62, 140, 150)),
+    (0, (120, 165, 135)),
+    (2000, (176, 178, 133)),
+    (4000, (203, 166, 108)),
+    (7000, (190, 123, 80)),
+    (11000, (166, 79, 57)),
+    (16000, (198, 112, 86)),
+    (21171, (244, 235, 221)),
+)
 
 PDS_MOLA = (
     "https://pds-geosciences.wustl.edu/mgs/"
@@ -166,11 +187,15 @@ def unique_sources() -> list[Source]:
             )
         )
 
+    # 32 ppd global MOLA topography (11520x5760, 0..360 east-positive).
+    # This is the highest single-file global MOLA product; it doubles the
+    # usable resolution of the browser height map relative to the old 16 ppd
+    # source while still fitting the five-GiB download budget.
     sources.append(
         Source(
-            key="mola:global-16ppd",
-            url=f"{PDS_MOLA}/meg016/megt90n000eb.img",
-            relative_path="mola/megt90n000eb.img",
+            key="mola:global-32ppd",
+            url=f"{PDS_MOLA}/meg032/megt90n000fb.img",
+            relative_path="mola/megt90n000fb.img",
         )
     )
 
@@ -316,27 +341,130 @@ def prepare_global_viking() -> Path:
     return output
 
 
-def prepare_global_height() -> Path:
-    output_dir = PUBLIC_DIR / "global"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output = output_dir / "mola-height.png"
-    print(f"[prepare] {output.relative_to(ROOT)}")
+def elevation_lookup_table() -> np.ndarray:
+    """256-entry RGB lookup table for the shared hypsometric ramp."""
+    positions = np.array([stop[0] for stop in ELEVATION_RAMP], dtype=np.float32)
+    values = np.linspace(0.0, 1.0, 256, dtype=np.float32)
+    meters = MOLA_MIN_METERS + values * (MOLA_MAX_METERS - MOLA_MIN_METERS)
+    channels = []
+    for channel in range(3):
+        colors = np.array(
+            [stop[1][channel] for stop in ELEVATION_RAMP], dtype=np.float32
+        )
+        channels.append(np.interp(meters, positions, colors))
+    return np.stack(channels, axis=1)
 
+
+def colorize_elevation(normalized: np.ndarray) -> np.ndarray:
+    table = elevation_lookup_table()
+    indices = np.clip(np.rint(normalized * 255), 0, 255).astype(np.uint8)
+    return np.clip(table[indices], 0, 255).astype(np.uint8)
+
+
+def relief_shade(elevation: np.ndarray) -> np.ndarray:
+    """Mild northwest hillshade for the static elevation map.
+
+    The globe already receives live 3D lighting, so this shade is deliberately
+    subtle (0.86..1.10) and only helps mid-tone relief read at a glance.
+    """
+    height, width = elevation.shape
+    y_spacing = (np.pi * MARS_MEAN_RADIUS_METERS) / height
+    center_lat = np.deg2rad(
+        np.linspace(90, -90, height, endpoint=False, dtype=np.float32)
+    )
+    x_spacing = (
+        2
+        * np.pi
+        * MARS_MEAN_RADIUS_METERS
+        * np.cos(center_lat)
+        / width
+    )
+    x_spacing = np.maximum(x_spacing, y_spacing * 0.05)[:, None]
+
+    dy, dx = np.gradient(elevation)
+    dx = dx / x_spacing
+    dy = dy / y_spacing
+
+    slope = np.arctan(np.hypot(dx, dy))
+    aspect = np.arctan2(-dx, dy)
+    zenith = np.deg2rad(45.0)
+    azimuth = np.deg2rad(315.0)
+
+    shade = (
+        np.cos(zenith) * np.cos(slope)
+        + np.sin(zenith) * np.sin(slope) * np.cos(azimuth - aspect)
+    )
+    shade = np.nan_to_num(shade, nan=0.0, posinf=1.0, neginf=0.0)
+    shade = np.clip(shade, 0.0, 1.0)
+    return (0.86 + shade * 0.24).astype(np.float32)
+
+
+def load_global_elevation() -> np.ndarray:
     raw = np.memmap(
-        RAW_DIR / "mola" / "megt90n000eb.img",
+        RAW_DIR / "mola" / "megt90n000fb.img",
         dtype=">i2",
         mode="r",
-        shape=(2880, 5760),
+        shape=(5760, 11520),
     )
     # PDS source is 0..360 east-positive; roll to -180..180 for the standard
     # equirectangular texture convention used by the globe geometry.
-    rolled = np.concatenate((raw[:, 2880:], raw[:, :2880]), axis=1)
-    image = Image.fromarray(normalize_elevation(rolled), "L")
-    image = image.resize((4096, 2048), Image.Resampling.LANCZOS)
-    image.save(output, "PNG", optimize=True)
+    rolled = np.concatenate((raw[:, 5760:], raw[:, :5760]), axis=1)
+    clipped = np.clip(rolled, MOLA_MIN_METERS, MOLA_MAX_METERS)
+    del rolled
+    image = Image.fromarray(clipped.astype(np.float32), "F")
+    del clipped
+    image = image.resize(GLOBAL_HEIGHT_SIZE, Image.Resampling.LANCZOS)
+    elevation = np.asarray(image, dtype=np.float32)
     image.close()
     del raw
-    return output
+    return elevation
+
+
+def prepare_global_height() -> tuple[Path, Path]:
+    output_dir = PUBLIC_DIR / "global"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    height_output = output_dir / "mola-height.png"
+    elevation_output = output_dir / "mola-elevation.webp"
+    print(f"[prepare] {height_output.relative_to(ROOT)}")
+
+    elevation = load_global_elevation()
+    normalized = (elevation - MOLA_MIN_METERS) / (
+        MOLA_MAX_METERS - MOLA_MIN_METERS
+    )
+
+    height_image = Image.fromarray(
+        np.rint(np.clip(normalized, 0, 1) * 255).astype(np.uint8), "L"
+    )
+    height_image.save(height_output, "PNG", optimize=True)
+    height_image.close()
+
+    print(f"[prepare] {elevation_output.relative_to(ROOT)}")
+    rgb = colorize_elevation(normalized)
+    # Compute the shade at half resolution: it is a soft 3D cue, not data.
+    shade_source = np.asarray(
+        Image.fromarray(
+            np.ascontiguousarray(elevation, dtype=np.float32), "F"
+        ).resize(
+            (GLOBAL_HEIGHT_SIZE[0] // 2, GLOBAL_HEIGHT_SIZE[1] // 2),
+            Image.Resampling.LANCZOS,
+        ),
+        dtype=np.float32,
+    )
+    shade = relief_shade(shade_source)
+    del shade_source
+    shade_image = Image.fromarray(
+        np.ascontiguousarray(shade, dtype=np.float32), "F"
+    ).resize(GLOBAL_HEIGHT_SIZE, Image.Resampling.BILINEAR)
+    shade = np.asarray(shade_image, dtype=np.float32)
+    shade_image.close()
+    rgb = np.clip(rgb * shade[..., None], 0, 255).astype(np.uint8)
+    del shade
+    elevation_image = Image.fromarray(rgb, "RGB")
+    elevation_image.save(elevation_output, "WEBP", quality=88, method=6)
+    elevation_image.close()
+    del elevation, normalized, rgb
+
+    return height_output, elevation_output
 
 
 def crop_box(
@@ -357,6 +485,7 @@ def prepare_patch(patch: Patch) -> dict[str, object]:
     output_dir.mkdir(parents=True, exist_ok=True)
     texture_output = output_dir / "themis.webp"
     height_output = output_dir / "mola-height.png"
+    elevation_output = output_dir / "mola-elevation.webp"
     bounds = patch.bounds
 
     print(f"[prepare] detail patch {patch.id}")
@@ -389,9 +518,15 @@ def prepare_patch(patch: Patch) -> dict[str, object]:
         bounds, patch.mola_west, patch.mola_north, 128
     )
     height = np.array(raw[top:bottom, left:right], copy=True)
-    height_image = Image.fromarray(normalize_elevation(height), "L")
+    normalized = normalize_elevation(height)
+    height_image = Image.fromarray(normalized, "L")
     height_image.save(height_output, "PNG", optimize=True)
     height_image.close()
+    elevation_image = Image.fromarray(
+        colorize_elevation(normalized.astype(np.float32) / 255.0), "RGB"
+    )
+    elevation_image.save(elevation_output, "WEBP", quality=90, method=6)
+    elevation_image.close()
     del raw
 
     west_signed = bounds["west"] if bounds["west"] <= 180 else bounds["west"] - 360
@@ -406,6 +541,7 @@ def prepare_patch(patch: Patch) -> dict[str, object]:
         },
         "texture": f"/terrain/patches/{patch.id}/themis.webp",
         "height": f"/terrain/patches/{patch.id}/mola-height.png",
+        "elevation": f"/terrain/patches/{patch.id}/mola-elevation.webp",
         "imageryResolutionMeters": 231.55,
         "elevationResolutionMeters": 463.1,
         "textureDimensions": [1536, 1536],
@@ -427,13 +563,29 @@ def write_manifest(patch_records: list[dict[str, object]], download_bytes: int) 
         "global": {
             "texture": "/terrain/global/viking-global.webp",
             "height": "/terrain/global/mola-height.png",
-            "textureDimensions": [8192, 4096],
-            "heightDimensions": [4096, 2048],
-            "textureResolutionMeters": 920,
-            "heightResolutionMeters": 3705,
+            "elevation": "/terrain/global/mola-elevation.webp",
+            "textureDimensions": list(GLOBAL_TEXTURE_SIZE),
+            "heightDimensions": list(GLOBAL_HEIGHT_SIZE),
+            "textureResolutionMeters": round(
+                MARS_MEAN_CIRCUMFERENCE_METERS / GLOBAL_TEXTURE_SIZE[0]
+            ),
+            "heightResolutionMeters": round(
+                MARS_MEAN_CIRCUMFERENCE_METERS / GLOBAL_HEIGHT_SIZE[0]
+            ),
+            "heightSourcePixelsPerDegree": 32,
+            "elevationRamp": {
+                "minMeters": MOLA_MIN_METERS,
+                "maxMeters": MOLA_MAX_METERS,
+                "stops": [
+                    {"meters": meters, "rgb": list(rgb)}
+                    for meters, rgb in ELEVATION_RAMP
+                ],
+                "reliefShading": "northwest, 45 degree sun, subtle",
+            },
             "sources": [
                 "NASA Viking Orbiter merged color mosaic / ASU",
-                "NASA MGS MOLA MEGDR v2.0 / PDS Geosciences Node",
+                "NASA MGS MOLA MEGDR v2.0 (32 ppd global) / PDS Geosciences Node",
+                "MOLA-derived hypsometric colorization and relief shading",
             ],
         },
         "patches": {record["id"]: record for record in patch_records},

@@ -51,6 +51,7 @@ export type LayerId =
   | 'day-temperature'
   | 'thermal-inertia'
   | 'hydrated-minerals'
+  | 'hematite'
 
 export type CameraAction = {
   type: 'zoom-in' | 'zoom-out' | 'reset' | 'focus' | 'route'

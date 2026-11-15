@@ -8,6 +8,7 @@ export type TerrainPatchDefinition = {
   }
   texture: string
   height: string
+  elevation: string
   imageryResolutionMeters: number
   elevationResolutionMeters: number
 }
@@ -19,8 +20,10 @@ export const MARS_MEAN_RADIUS_METERS = 3_389_500
 export const GLOBAL_TERRAIN = {
   texture: '/terrain/global/viking-global.webp',
   height: '/terrain/global/mola-height.png',
-  textureResolutionMeters: 920,
-  elevationResolutionMeters: 3705,
+  elevation: '/terrain/global/mola-elevation.webp',
+  textureResolutionMeters: 2600,
+  elevationResolutionMeters: 2600,
+  heightSourcePixelsPerDegree: 32,
 }
 
 export const TERRAIN_PATCHES: Record<string, TerrainPatchDefinition> = {
@@ -29,6 +32,7 @@ export const TERRAIN_PATCHES: Record<string, TerrainPatchDefinition> = {
     bounds: { north: 21.3, south: 15.3, west: 74.45, east: 80.45 },
     texture: '/terrain/patches/jezero/themis.webp',
     height: '/terrain/patches/jezero/mola-height.png',
+    elevation: '/terrain/patches/jezero/mola-elevation.webp',
     imageryResolutionMeters: 231.55,
     elevationResolutionMeters: 463.1,
   },
@@ -37,6 +41,7 @@ export const TERRAIN_PATCHES: Record<string, TerrainPatchDefinition> = {
     bounds: { north: -2.4, south: -8.4, west: 134.8, east: 140.8 },
     texture: '/terrain/patches/gale/themis.webp',
     height: '/terrain/patches/gale/mola-height.png',
+    elevation: '/terrain/patches/gale/mola-elevation.webp',
     imageryResolutionMeters: 231.55,
     elevationResolutionMeters: 463.1,
   },
@@ -45,6 +50,7 @@ export const TERRAIN_PATCHES: Record<string, TerrainPatchDefinition> = {
     bounds: { north: 7.5, south: 1.5, west: 132.9, east: 138.9 },
     texture: '/terrain/patches/elysium/themis.webp',
     height: '/terrain/patches/elysium/mola-height.png',
+    elevation: '/terrain/patches/elysium/mola-elevation.webp',
     imageryResolutionMeters: 231.55,
     elevationResolutionMeters: 463.1,
   },
@@ -53,6 +59,7 @@ export const TERRAIN_PATCHES: Record<string, TerrainPatchDefinition> = {
     bounds: { north: 21.65, south: 15.65, west: -136.8, east: -130.8 },
     texture: '/terrain/patches/olympus/themis.webp',
     height: '/terrain/patches/olympus/mola-height.png',
+    elevation: '/terrain/patches/olympus/mola-elevation.webp',
     imageryResolutionMeters: 231.55,
     elevationResolutionMeters: 463.1,
   },
@@ -61,6 +68,7 @@ export const TERRAIN_PATCHES: Record<string, TerrainPatchDefinition> = {
     bounds: { north: -11, south: -17, west: -73, east: -67 },
     texture: '/terrain/patches/valles/themis.webp',
     height: '/terrain/patches/valles/mola-height.png',
+    elevation: '/terrain/patches/valles/mola-elevation.webp',
     imageryResolutionMeters: 231.55,
     elevationResolutionMeters: 463.1,
   },

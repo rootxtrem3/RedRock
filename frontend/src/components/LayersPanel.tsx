@@ -1,4 +1,5 @@
-import { Check, Layers3, X } from 'lucide-react'
+import { Check, ExternalLink, Layers3, X } from 'lucide-react'
+import { LAYER_DEFINITIONS, type LayerDefinition } from '../data/layers'
 import type { LayerId } from '../types'
 
 type LayersPanelProps = {
@@ -10,38 +11,14 @@ type LayersPanelProps = {
 }
 
 const layerGroups: Array<{
-  name: string
-  options: Array<{ id: LayerId; label: string; note?: string }>
+  name: LayerDefinition['group']
+  ids: LayerId[]
 }> = [
-  { name: 'Base', options: [{ id: 'visual', label: 'Visual Mars', note: 'Viking / JPL mosaic' }] },
-  {
-    name: 'Terrain',
-    options: [
-      { id: 'elevation', label: 'Elevation', note: 'MOLA' },
-      { id: 'roughness', label: 'Surface roughness', note: 'Derived model' },
-    ],
-  },
-  {
-    name: 'Thermal',
-    options: [
-      { id: 'day-temperature', label: 'Day temperature', note: 'THEMIS' },
-      { id: 'thermal-inertia', label: 'Thermal inertia', note: 'TES / THEMIS' },
-    ],
-  },
-  {
-    name: 'Minerals',
-    options: [{ id: 'hydrated-minerals', label: 'Hydrated minerals', note: 'CRISM indicators' }],
-  },
+  { name: 'Base', ids: ['visual'] },
+  { name: 'Terrain', ids: ['elevation', 'roughness'] },
+  { name: 'Thermal', ids: ['day-temperature', 'thermal-inertia'] },
+  { name: 'Minerals', ids: ['hydrated-minerals', 'hematite'] },
 ]
-
-const legendLabels: Record<LayerId, [string, string] | null> = {
-  visual: null,
-  elevation: ['LOW', 'HIGH'],
-  roughness: ['SMOOTH', 'ROUGH'],
-  'day-temperature': ['COLD', 'WARM'],
-  'thermal-inertia': ['LOW', 'HIGH'],
-  'hydrated-minerals': ['NO INDICATOR', 'INDICATOR'],
-}
 
 export function LayersPanel({
   activeLayer,
@@ -50,7 +27,8 @@ export function LayersPanel({
   onMissionSitesChange,
   onClose,
 }: LayersPanelProps) {
-  const legend = legendLabels[activeLayer]
+  const active = LAYER_DEFINITIONS[activeLayer]
+  const legend = active.legend
 
   return (
     <aside className="floating-panel layers-panel panel-enter" aria-label="Map layers">
@@ -63,29 +41,35 @@ export function LayersPanel({
           <X size={18} />
         </button>
       </div>
-      <p className="drawer-intro">Select one primary scientific layer to keep the planetary view legible.</p>
+      <p className="drawer-intro">
+        Measured NASA products rendered on the displaced MOLA surface. Select one
+        primary layer to keep the planetary view legible.
+      </p>
 
       <div className="layer-groups">
         {layerGroups.map((group) => (
           <div className="layer-group" key={group.name}>
             <span className="layer-group-name">{group.name}</span>
-            {group.options.map((option) => (
-              <button
-                type="button"
-                key={option.id}
-                className={`layer-option ${activeLayer === option.id ? 'is-active' : ''}`}
-                onClick={() => onLayerChange(option.id)}
-              >
-                <span className="layer-radio">
-                  {activeLayer === option.id && <span />}
-                </span>
-                <span>
-                  <strong>{option.label}</strong>
-                  {option.note && <small>{option.note}</small>}
-                </span>
-                {activeLayer === option.id && <Check size={15} />}
-              </button>
-            ))}
+            {group.ids.map((id) => {
+              const option = LAYER_DEFINITIONS[id]
+              return (
+                <button
+                  type="button"
+                  key={option.id}
+                  className={`layer-option ${activeLayer === option.id ? 'is-active' : ''}`}
+                  onClick={() => onLayerChange(option.id)}
+                >
+                  <span className="layer-radio">
+                    {activeLayer === option.id && <span />}
+                  </span>
+                  <span>
+                    <strong>{option.label}</strong>
+                    <small>{option.note}</small>
+                  </span>
+                  {activeLayer === option.id && <Check size={15} />}
+                </button>
+              )
+            })}
           </div>
         ))}
         <div className="layer-group">
@@ -107,11 +91,29 @@ export function LayersPanel({
 
       {legend && (
         <div className="layer-legend">
-          <div className="section-label"><span>LEG</span> {activeLayer.replaceAll('-', ' ')}</div>
-          <div className={`legend-scale legend-${activeLayer}`}>
-            {Array.from({ length: 8 }, (_, index) => <i key={index} />)}
-          </div>
-          <div className="legend-labels"><span>{legend[0]}</span><span>{legend[1]}</span></div>
+          <div className="section-label"><span>LEG</span> {active.label}</div>
+          <div
+            className="legend-scale"
+            role="img"
+            aria-label={`${legend.low} to ${legend.high}`}
+            style={{
+              backgroundImage: `linear-gradient(90deg, ${legend.stops.join(', ')})`,
+            }}
+          />
+          <div className="legend-labels"><span>{legend.low}</span><span>{legend.high}</span></div>
+          {legend.unit && <div className="legend-unit">{legend.unit}</div>}
+          {legend.caption && <p className="legend-caption">{legend.caption}</p>}
+          <p className="legend-description">{active.description}</p>
+          <a
+            className="legend-source"
+            href={active.sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span>{active.source}</span>
+            <ExternalLink size={11} />
+          </a>
+          <div className="legend-resolution">{active.resolution}</div>
         </div>
       )}
     </aside>

@@ -32,4 +32,13 @@ npm run build
 
 ## Data note
 
-The local Mars surface texture is the NASA/JPL-Caltech Viking-derived Mars image texture published through [NASA Science 3D Resources](https://science.nasa.gov/3d-resources/mars/). Scientific values in this frontend are curated prototype content and the interface clearly labels unavailable or uncertain local data. This is not a validated operational navigation system.
+The globe uses locally generated NASA products under `public/terrain/`:
+
+- **Surface imagery** — 8192×4096 Viking Orbiter color mosaic (ASU Mars Global Data Sets).
+- **Terrain height** — 8192×4096 MOLA MEGDR v2.0 height map at 32 ppd (~2.6 km/pixel), used for real geometric displacement and bump shading of the globe.
+- **Elevation layer** — hypsometric colorization of that height map with subtle northwest relief shading.
+- **Thermal layers** — THEMIS Day IR brightness (8K, 256 ppd published mosaic via the ASU JMARS WMS) and TES nighttime thermal inertia (Putzig et al. 2005, 20 ppd).
+- **Mineral layers** — TES sheet-silicate/high-silica-glass and hematite abundance (Bandfield 2002, 4 ppd).
+- **Local detail** — 6×6° THEMIS Day IR patches at 256 ppd with matching MOLA elevation for Jezero, Gale, Elysium, Olympus, and Valles.
+
+Regenerate the assets with `python3 scripts/prepare_mars_terrain.py` and `python3 scripts/prepare_mars_layer_globes.py`. Both scripts have a hard 5 GiB download budget and cache raw products under `data/mars/raw/`. Scientific values in the interface are curated prototype content; the interface labels uncertain or unavailable local data, and this is not a validated operational navigation system.

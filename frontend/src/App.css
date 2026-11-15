@@ -920,24 +920,19 @@
 }
 
 .legend-scale {
-  height: 9px;
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 2px;
+  height: 10px;
+  border: 1px solid rgba(232, 226, 216, 0.14);
+  background-size: 100% 100%;
 }
 
-.legend-scale i:nth-child(1) { background: #262321; }
-.legend-scale i:nth-child(2) { background: #3b312d; }
-.legend-scale i:nth-child(3) { background: #543a33; }
-.legend-scale i:nth-child(4) { background: #6a4036; }
-.legend-scale i:nth-child(5) { background: #824536; }
-.legend-scale i:nth-child(6) { background: #9a4d39; }
-.legend-scale i:nth-child(7) { background: #b25841; }
-.legend-scale i:nth-child(8) { background: #d08b75; }
-.legend-hydrated-minerals i:nth-child(odd) { background: #d2cbc0; }
-.legend-hydrated-minerals i:nth-child(even) { background: #6f3d32; }
-
-.legend-labels { display: flex; justify-content: space-between; margin-top: 7px; color: #817a74; font-family: var(--mono); font-size: 7px; }
+.legend-labels { display: flex; justify-content: space-between; gap: 10px; margin-top: 7px; color: #a29a92; font-family: var(--mono); font-size: 7px; letter-spacing: 0.05em; }
+.legend-unit { margin-top: 7px; color: #7f7973; font-family: var(--mono); font-size: 7px; letter-spacing: 0.06em; text-transform: uppercase; }
+.legend-caption { margin: 5px 0 0; color: #6f6963; font-size: 8px; font-style: italic; }
+.legend-description { margin: 11px 0 0; padding-top: 11px; color: #8f8880; border-top: 1px solid var(--border-soft); font-size: 9px; line-height: 1.55; }
+.legend-source { display: flex; align-items: flex-start; gap: 6px; margin-top: 10px; color: #9c948c; font-size: 8px; line-height: 1.45; text-decoration: none; }
+.legend-source:hover { color: var(--faded-white); }
+.legend-source svg { flex: 0 0 auto; margin-top: 1px; color: var(--mars-red-light); }
+.legend-resolution { margin-top: 7px; color: #6d6761; font-family: var(--mono); font-size: 7px; letter-spacing: 0.05em; text-transform: uppercase; }
 
 .site-list { padding-bottom: 15px; }
 .site-row {
@@ -1186,6 +1181,28 @@
 .all-layers { min-height: 32px; display: flex; align-items: center; gap: 6px; margin-top: 6px; padding: 0; color: #817b74; background: transparent; border: 0; font-size: 7px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
 .all-layers:hover { color: var(--faded-white); }
 
+.layer-readout {
+  position: absolute;
+  z-index: 7;
+  right: 82px;
+  bottom: 54px;
+  width: 258px;
+  padding: 11px 12px;
+  background: rgba(9, 9, 9, 0.84);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  transition: right 0.25s ease;
+}
+
+.guide-active .layer-readout { right: 570px; }
+
+.layer-readout-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.layer-readout-head span { color: #6f6963; font-family: var(--mono); font-size: 6px; letter-spacing: 0.12em; }
+.layer-readout-head strong { font-size: 9px; font-weight: 650; letter-spacing: 0.09em; text-transform: uppercase; }
+.layer-readout-scale { height: 9px; margin-top: 9px; border: 1px solid rgba(232, 226, 216, 0.16); }
+.layer-readout-labels { display: flex; justify-content: space-between; gap: 10px; margin-top: 6px; color: #9b938b; font-family: var(--mono); font-size: 7px; }
+.layer-readout small { display: block; margin-top: 7px; color: #6d6761; font-family: var(--mono); font-size: 7px; letter-spacing: 0.04em; text-transform: uppercase; }
+
 .compass-widget {
   position: absolute;
   z-index: 5;
@@ -1360,7 +1377,8 @@
 }
 
 .source-list { padding: 5px 18px; }
-.source-row { min-height: 70px; display: grid; grid-template-columns: 25px 1fr 20px; align-items: center; gap: 9px; border-bottom: 1px solid var(--border-soft); }
+.source-row { min-height: 70px; display: grid; grid-template-columns: 25px 1fr 20px; align-items: center; gap: 9px; color: inherit; border-bottom: 1px solid var(--border-soft); text-decoration: none; }
+.source-row:hover { background: rgba(232, 226, 216, 0.035); }
 .source-row > span { color: var(--mars-red-light); font-family: var(--mono); font-size: 8px; }
 .source-row div { display: flex; flex-direction: column; }
 .source-row strong { font-size: 10px; }
@@ -1414,7 +1432,8 @@
 
   .compass-widget,
   .orbital-data-widget,
-  .terrain-detail-indicator { display: none; }
+  .terrain-detail-indicator,
+  .layer-readout { display: none; }
   .viewport-reticle { width: 44px; height: 44px; }
   .map-controls { top: 77px; right: 9px !important; bottom: auto; }
   .map-controls button { width: 44px; height: 44px; }

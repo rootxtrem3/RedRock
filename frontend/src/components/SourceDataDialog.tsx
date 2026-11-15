@@ -5,11 +5,42 @@ type SourceDataDialogProps = {
 }
 
 const sources = [
-  ['Mars surface texture', 'Viking imagery processed by USGS', 'NASA / JPL-Caltech'],
-  ['Elevation & terrain', 'Mars Orbiter Laser Altimeter', 'MOLA / MGS'],
-  ['Thermal context', 'Thermal Emission Imaging System', 'THEMIS / Mars Odyssey'],
-  ['Mineral indicators', 'Compact Reconnaissance Imaging Spectrometer', 'CRISM / MRO'],
-  ['Subsurface indicators', 'Orbital radar sounding', 'SHARAD / MARSIS'],
+  {
+    name: 'Surface imagery',
+    detail: 'Viking Orbiter color mosaic · 8K globe texture',
+    provider: 'NASA / USGS / ASU Mars Global Data Sets',
+    url: 'https://www.mars.asu.edu/data/mdim_color/',
+  },
+  {
+    name: 'Elevation & terrain',
+    detail: 'MOLA MEGDR 32 ppd · 8K height + colorized relief',
+    provider: 'NASA MGS / PDS Geosciences Node',
+    url: 'https://pds-geosciences.wustl.edu/mgs/mgs-m-mola-5-megdr-l3-v1/mgsl_300x/',
+  },
+  {
+    name: 'Daytime thermal',
+    detail: 'THEMIS Day IR global mosaic · 256 ppd source',
+    provider: 'NASA / JPL-Caltech / Arizona State University',
+    url: 'https://www.mars.asu.edu/data/thm_dir/',
+  },
+  {
+    name: 'Thermal inertia',
+    detail: 'TES nighttime retrieval · Putzig et al. (2005)',
+    provider: 'NASA / JPL / Arizona State University',
+    url: 'https://www.mars.asu.edu/data/tes_putzigti/nighttime2005/',
+  },
+  {
+    name: 'Mineral indicators',
+    detail: 'TES sheet silicates & high-silica glass · Bandfield (2002)',
+    provider: 'NASA / JPL / Arizona State University',
+    url: 'https://www.mars.asu.edu/data/tes_silicates/',
+  },
+  {
+    name: 'Hematite abundance',
+    detail: 'TES hematite indicator · Bandfield (2002)',
+    provider: 'NASA / JPL / Arizona State University',
+    url: 'https://www.mars.asu.edu/data/tes_hematite/',
+  },
 ]
 
 export function SourceDataDialog({ onClose }: SourceDataDialogProps) {
@@ -33,12 +64,18 @@ export function SourceDataDialog({ onClose }: SourceDataDialogProps) {
         </div>
         <p className="drawer-intro">The interface distinguishes direct observations, derived indicators, and unavailable local data.</p>
         <div className="source-list">
-          {sources.map(([name, detail, provider], index) => (
-            <div className="source-row" key={name}>
+          {sources.map((source, index) => (
+            <a
+              className="source-row"
+              key={source.name}
+              href={source.url}
+              target="_blank"
+              rel="noreferrer"
+            >
               <span>{String(index + 1).padStart(2, '0')}</span>
-              <div><strong>{name}</strong><p>{detail}</p><small>{provider}</small></div>
+              <div><strong>{source.name}</strong><p>{source.detail}</p><small>{source.provider}</small></div>
               <ExternalLink size={14} />
-            </div>
+            </a>
           ))}
         </div>
         <div className="source-disclaimer">

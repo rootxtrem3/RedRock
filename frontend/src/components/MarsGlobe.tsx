@@ -28,6 +28,8 @@ import {
   getTerrainPatch,
   type TerrainPatchDefinition,
 } from '../data/terrain'
+import { LAYER_DEFINITIONS } from '../data/layers'
+import { sharedHeightTexture } from '../data/textureCache'
 import type { CameraAction, LayerId, MarsLocation, Station } from '../types'
 
 const MARS_RADIUS = 1.16
@@ -113,29 +115,12 @@ function StaticStars() {
   )
 }
 
-const LAYER_GLOBE_TEXTURES: Partial<Record<LayerId, string>> = {
-  roughness: '/terrain/layers/roughness.webp',
-  'day-temperature': '/terrain/layers/day-temperature.webp',
-  'thermal-inertia': '/terrain/layers/thermal-inertia.webp',
-  'hydrated-minerals': '/terrain/layers/hydrated-minerals.webp',
-}
-
 function ScientificLayerGlobe({ layer }: { layer: LayerId }) {
   if (layer === 'visual') return null
 
-  if (layer === 'elevation') {
-    return (
-      <GlobalLayerSphere
-        layerId="elevation"
-        visible
-        textureUrl={GLOBAL_TERRAIN.height}
-        heightUrl={GLOBAL_TERRAIN.height}
-        opacity={0.9}
-      />
-    )
-  }
-
-  const textureUrl = LAYER_GLOBE_TEXTURES[layer]
+  const definition = LAYER_DEFINITIONS[layer]
+  const textureUrl =
+    layer === 'elevation' ? GLOBAL_TERRAIN.elevation : definition.texture
   if (!textureUrl) return null
 
   return (
@@ -144,6 +129,7 @@ function ScientificLayerGlobe({ layer }: { layer: LayerId }) {
       visible
       textureUrl={textureUrl}
       heightUrl={GLOBAL_TERRAIN.height}
+      opacity={definition.opacity}
     />
   )
 }
@@ -169,12 +155,11 @@ function MarsSurface({
     return configuredTexture
   }, [gl, sourceTexture])
 
-  const height = useMemo(() => {
-    const configuredHeight = sourceHeight.clone()
-    configuredHeight.anisotropy = Math.min(4, gl.capabilities.getMaxAnisotropy())
-    configuredHeight.needsUpdate = true
-    return configuredHeight
-  }, [gl, sourceHeight])
+  // One shared 8K height texture serves the base globe and every overlay.
+  const height = useMemo(
+    () => sharedHeightTexture(sourceHeight, gl.capabilities.getMaxAnisotropy()),
+    [gl, sourceHeight],
+  )
 
   useEffect(() => {
     onReady()
@@ -188,7 +173,7 @@ function MarsSurface({
   return (
     <group>
       <mesh {...tap}>
-        <sphereGeometry args={[MARS_RADIUS, 256, 128]} />
+        <sphereGeometry args={[MARS_RADIUS, 384, 192]} />
         <meshStandardMaterial
           map={texture}
           displacementMap={height}
@@ -211,9 +196,10 @@ function DetailTerrainPatch({
   patch: TerrainPatchDefinition
   layer: LayerId
 }) {
-  const [sourceTexture, sourceHeight] = useLoader(TextureLoader, [
+  const [sourceTexture, sourceHeight, sourceElevation] = useLoader(TextureLoader, [
     patch.texture,
     patch.height,
+    patch.elevation,
   ])
   const { gl } = useThree()
 
@@ -225,12 +211,21 @@ function DetailTerrainPatch({
     return configuredTexture
   }, [gl, sourceTexture])
 
-  const height = useMemo(() => {
-    const configuredHeight = sourceHeight.clone()
-    configuredHeight.anisotropy = Math.min(8, gl.capabilities.getMaxAnisotropy())
-    configuredHeight.needsUpdate = true
-    return configuredHeight
-  }, [gl, sourceHeight])
+  const height = useMemo(
+    () => sharedHeightTexture(sourceHeight, gl.capabilities.getMaxAnisotropy()),
+    [gl, sourceHeight],
+  )
+
+  const elevation = useMemo(() => {
+    const configuredElevation = sourceElevation.clone()
+    configuredElevation.colorSpace = SRGBColorSpace
+    configuredElevation.anisotropy = Math.min(8, gl.capabilities.getMaxAnisotropy())
+    configuredElevation.needsUpdate = true
+    return configuredElevation
+  }, [gl, sourceElevation])
+
+  useEffect(() => () => elevation.dispose(), [elevation])
+  useEffect(() => () => texture.dispose(), [texture])
 
   const geometryArgs = useMemo(() => {
     const phiStart = MathUtils.degToRad(patch.bounds.west + 180)
@@ -252,13 +247,13 @@ function DetailTerrainPatch({
     <mesh renderOrder={2}>
       <sphereGeometry args={geometryArgs} />
       <meshStandardMaterial
-        map={layer === 'elevation' ? height : texture}
+        map={layer === 'elevation' ? elevation : texture}
         displacementMap={height}
         displacementScale={TERRAIN_DISPLACEMENT_SCALE}
         displacementBias={TERRAIN_DISPLACEMENT_BIAS}
         bumpMap={height}
         bumpScale={0.0035}
-        color={layer === 'elevation' ? '#c7654c' : '#e8e2d8'}
+        color="#e8e2d8"
         roughness={1}
         metalness={0}
         transparent
@@ -545,15 +540,16 @@ function GlobeScene(props: MarsGlobeProps) {
         />
       </Suspense>
       <ScientificLayerGlobe layer={props.layer} />
-      {terrainPatch && (
-        <Suspense fallback={null}>
-          <DetailTerrainPatch
-            key={terrainPatch.id}
-            patch={terrainPatch}
-            layer={props.layer}
-          />
-        </Suspense>
-      )}
+      {terrainPatch &&
+        (props.layer === 'visual' || props.layer === 'elevation') && (
+          <Suspense fallback={null}>
+            <DetailTerrainPatch
+              key={terrainPatch.id}
+              patch={terrainPatch}
+              layer={props.layer}
+            />
+          </Suspense>
+        )}
       {showKnownLocations &&
         props.knownLocations.map((location) => (
           <Marker
