@@ -254,8 +254,9 @@ function DetailTerrainPatch({
   patch: TerrainPatchDefinition
   layer: LayerId
 }) {
-  const [sourceTexture, sourceHeight, sourceElevation] = useLoader(TextureLoader, [
+  const [sourceTexture, sourceDayTemperature, sourceHeight, sourceElevation] = useLoader(TextureLoader, [
     patch.texture,
+    patch.dayTemperature ?? patch.texture,
     patch.height,
     patch.elevation,
   ])
@@ -274,6 +275,14 @@ function DetailTerrainPatch({
     [gl, sourceHeight],
   )
 
+  const dayTemperature = useMemo(() => {
+    const configured = sourceDayTemperature.clone()
+    configured.colorSpace = SRGBColorSpace
+    configured.anisotropy = Math.min(12, gl.capabilities.getMaxAnisotropy())
+    configured.needsUpdate = true
+    return configured
+  }, [gl, sourceDayTemperature])
+
   const elevation = useMemo(() => {
     const configuredElevation = sourceElevation.clone()
     configuredElevation.colorSpace = SRGBColorSpace
@@ -284,6 +293,7 @@ function DetailTerrainPatch({
 
   useEffect(() => () => elevation.dispose(), [elevation])
   useEffect(() => () => texture.dispose(), [texture])
+  useEffect(() => () => dayTemperature.dispose(), [dayTemperature])
 
   const geometryArgs = useMemo(() => {
     const phiStart = MathUtils.degToRad(patch.bounds.west + 180)
@@ -291,7 +301,7 @@ function DetailTerrainPatch({
     const thetaStart = MathUtils.degToRad(90 - patch.bounds.north)
     const thetaLength = MathUtils.degToRad(patch.bounds.north - patch.bounds.south)
     return [
-      MARS_RADIUS + 0.00015,
+      MARS_RADIUS + (layer === 'day-temperature' ? 0.00028 : 0.00015),
       192,
       192,
       phiStart,
@@ -299,19 +309,25 @@ function DetailTerrainPatch({
       thetaStart,
       thetaLength,
     ] as const
-  }, [patch])
+  }, [layer, patch])
 
   return (
     <mesh renderOrder={2}>
       <sphereGeometry args={geometryArgs} />
       <meshStandardMaterial
-        map={layer === 'elevation' ? elevation : texture}
+        map={
+          layer === 'elevation'
+            ? elevation
+            : layer === 'day-temperature'
+              ? dayTemperature
+              : texture
+        }
         displacementMap={height}
         displacementScale={TERRAIN_DISPLACEMENT_SCALE}
         displacementBias={TERRAIN_DISPLACEMENT_BIAS}
         bumpMap={height}
         bumpScale={0.0035}
-        color="#e8e2d8"
+        color={layer === 'day-temperature' ? '#ffffff' : '#e8e2d8'}
         roughness={1}
         metalness={0}
         transparent
@@ -590,7 +606,7 @@ function GlobeScene(props: MarsGlobeProps) {
       </Suspense>
       <ScientificLayerGlobe layer={props.layer} />
       {terrainPatch &&
-        (props.layer === 'visual' || props.layer === 'elevation') && (
+        (props.layer === 'visual' || props.layer === 'elevation' || props.layer === 'day-temperature') && (
           <Suspense fallback={null}>
             <DetailTerrainPatch
               key={terrainPatch.id}

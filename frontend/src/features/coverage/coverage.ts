@@ -17,7 +17,6 @@ export type LayerCoverage = {
 
 export type CoverageLayerId =
   | LayerId
-  | 'ice-consistency'
   | 'radiation'
   | 'quantitative-minerals'
 
@@ -52,14 +51,14 @@ export const COVERAGE_REGISTRY = {
     noDataTreatment: 'Mosaic seams and coverage gaps are left dark; no imagery is synthesized to fill them.',
     evidenceType: 'Orbital color imagery mosaic',
     caveat:
-      'Viking-era basemap. Colour is processed and not a true human-view scene; ~2.6 km/pixel cannot resolve landing hazards or meter-scale ice.',
+      'Viking-era global basemap. Five close-view context patches use THEMIS Day IR at ~231 m/pixel; those local patches are thermal infrared, not visible-color imagery. Neither resolves meter-scale hazards.',
     lastChecked: '2026-11-15',
   },
   elevation: {
     id: 'elevation',
     label: 'Elevation (MOLA)',
     availability: 'global',
-    resolution: '8K texture · 32 ppd MOLA source (~2.6 km/pixel)',
+    resolution: 'Global 8K texture · ~2.6 km/pixel; five local patches at 128 ppd (~463 m/pixel)',
     sourceName: 'NASA MGS MOLA MEGDR v2.0 / PDS Geosciences Node',
     sourceUrl:
       'https://pds-geosciences.wustl.edu/mgs/mgs-m-mola-5-megdr-l3-v1/mgsl_300x/',
@@ -86,13 +85,13 @@ export const COVERAGE_REGISTRY = {
     id: 'day-temperature',
     label: 'Day IR brightness (THEMIS)',
     availability: 'global',
-    resolution: '8K texture · 256 ppd published THEMIS mosaic',
-    sourceName: 'NASA/JPL-Caltech/ASU THEMIS Day IR Global Mosaic v2.0',
-    sourceUrl: 'https://www.mars.asu.edu/data/thm_dir/',
-    noDataTreatment: 'No-data gores remain transparent; values are not interpolated across them.',
+    resolution: 'Global 8K view from 256 ppd source; five named-region patches from the 100 m mosaic v11',
+    sourceName: 'NASA/JPL-Caltech/ASU THEMIS Day IR mosaics v2.0 and v11',
+    sourceUrl: 'https://www.mars.asu.edu/data/thm_dir_100m/',
+    noDataTreatment: 'No-data gores and regional zero-value pixels remain transparent; gaps are not filled.',
     evidenceType: 'Orbital thermal-infrared brightness mosaic (12.57 µm)',
     caveat:
-      'The published global mosaic is an 8-bit relative brightness product, not calibrated kinetic temperature and not a subsurface temperature model.',
+      'The products are relative brightness mosaics, not calibrated kinetic temperature or a subsurface temperature model. 100 m patches cover only Jezero, Gale, Elysium, Olympus, and Valles; other locations use the coarser global texture.',
     lastChecked: '2026-11-15',
   },
   'thermal-inertia': {
@@ -140,15 +139,15 @@ export const COVERAGE_REGISTRY = {
   'ice-consistency': {
     id: 'ice-consistency',
     label: 'Shallow ice consistency, 0–1 m (SWIM)',
-    availability: 'not-bundled',
-    resolution: 'Not bundled · SWIM 0–1 m consistency grid required',
-    sourceName: 'NASA SWIM (Subsurface Water Ice Mapping) project — product not bundled',
-    sourceUrl: 'https://swim.psi.edu/',
+    availability: 'regional',
+    resolution: '20 ppd native raster · ~2.96 km/pixel · 60°S–60°N',
+    sourceName: 'NASA SWIM 4MIM · 0–1 m consistency product',
+    sourceUrl: 'https://swim.psi.edu/SWIM4MIMProducts.php',
     noDataTreatment:
-      'Nothing to render: no consistency raster is present. Absence is shown explicitly as "not bundled", never as zero ice.',
+      'Original -30 no-data sentinel and areas outside 60°S–60°N are transparent; no-data is not interpolated.',
     evidenceType: 'Geophysical consistency index (radar, neutron and thermal integration)',
     caveat:
-      'Without the SWIM grid and a prospect-search service, no shallow-ice consistency can be shown here. A missing layer option is not evidence that ice is absent.',
+      'Higher SWIM consistency indicates agreement among orbital techniques for possible shallow ice. It is not a calibrated probability, confirmed water, water quantity, or evidence that ice is harvestable. Ci ≥ 0.3 is the published positive-indicator threshold for this depth band.',
     lastChecked: '2026-11-15',
   },
   radiation: {

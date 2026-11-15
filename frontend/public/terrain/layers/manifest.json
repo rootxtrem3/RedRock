@@ -120,7 +120,106 @@
         ],
         "direction": "cold/dark to warm/bright",
         "note": "The published mosaic is an 8-bit relative brightness product, not a calibrated kinetic-temperature grid."
-      }
+      },
+      "regionalPatches": [
+        {
+          "id": "jezero",
+          "url": "/terrain/patches/jezero/themis-day-ir-100m.webp",
+          "file": "frontend/public/terrain/patches/jezero/themis-day-ir-100m.webp",
+          "dimensions": [
+            3557,
+            3556
+          ],
+          "bounds": {
+            "north": 21.3,
+            "south": 15.3,
+            "west": 74.45,
+            "east": 80.45
+          },
+          "resolution": "99.7 m/pixel source",
+          "source": "NASA Mars Odyssey THEMIS Day IR 100 m Global Mosaic v11 (ASU)",
+          "sourceUrl": "https://www.mars.asu.edu/data/thm_dir_100m/",
+          "noData": "Source PGM value 0 retained as transparent; no-data is not interpolated."
+        },
+        {
+          "id": "gale",
+          "url": "/terrain/patches/gale/themis-day-ir-100m.webp",
+          "file": "frontend/public/terrain/patches/gale/themis-day-ir-100m.webp",
+          "dimensions": [
+            3556,
+            3556
+          ],
+          "bounds": {
+            "north": -2.4000000000000004,
+            "south": -8.4,
+            "west": 134.8,
+            "east": 140.8
+          },
+          "resolution": "99.7 m/pixel source",
+          "source": "NASA Mars Odyssey THEMIS Day IR 100 m Global Mosaic v11 (ASU)",
+          "sourceUrl": "https://www.mars.asu.edu/data/thm_dir_100m/",
+          "noData": "Source PGM value 0 retained as transparent; no-data is not interpolated."
+        },
+        {
+          "id": "elysium",
+          "url": "/terrain/patches/elysium/themis-day-ir-100m.webp",
+          "file": "frontend/public/terrain/patches/elysium/themis-day-ir-100m.webp",
+          "dimensions": [
+            3557,
+            3556
+          ],
+          "bounds": {
+            "north": 7.5,
+            "south": 1.5,
+            "west": 132.9,
+            "east": 138.9
+          },
+          "resolution": "99.7 m/pixel source",
+          "source": "NASA Mars Odyssey THEMIS Day IR 100 m Global Mosaic v11 (ASU)",
+          "sourceUrl": "https://www.mars.asu.edu/data/thm_dir_100m/",
+          "noData": "Source PGM value 0 retained as transparent; no-data is not interpolated."
+        },
+        {
+          "id": "olympus",
+          "url": "/terrain/patches/olympus/themis-day-ir-100m.webp",
+          "file": "frontend/public/terrain/patches/olympus/themis-day-ir-100m.webp",
+          "dimensions": [
+            3556,
+            3557
+          ],
+          "bounds": {
+            "north": 21.65,
+            "south": 15.649999999999999,
+            "west": -136.8,
+            "east": -130.8
+          },
+          "resolution": "99.7 m/pixel source",
+          "source": "NASA Mars Odyssey THEMIS Day IR 100 m Global Mosaic v11 (ASU)",
+          "sourceUrl": "https://www.mars.asu.edu/data/thm_dir_100m/",
+          "noData": "Source PGM value 0 retained as transparent; no-data is not interpolated."
+        },
+        {
+          "id": "valles",
+          "url": "/terrain/patches/valles/themis-day-ir-100m.webp",
+          "file": "frontend/public/terrain/patches/valles/themis-day-ir-100m.webp",
+          "dimensions": [
+            3557,
+            3557
+          ],
+          "bounds": {
+            "north": -11.0,
+            "south": -17.0,
+            "west": -73.0,
+            "east": -67.0
+          },
+          "resolution": "99.7 m/pixel source",
+          "source": "NASA Mars Odyssey THEMIS Day IR 100 m Global Mosaic v11 (ASU)",
+          "sourceUrl": "https://www.mars.asu.edu/data/thm_dir_100m/",
+          "noData": "Source PGM value 0 retained as transparent; no-data is not interpolated."
+        }
+      ],
+      "regionalResolution": "99.7 m/pixel source for Jezero, Gale, Elysium, Olympus, and Valles",
+      "regionalNoData": "No-data pixels remain transparent; regional gaps are not filled."
     },
     {
       "id": "tes-thermal-inertia",
@@ -261,6 +360,48 @@
         720
       ],
       "noData": "WMS alpha channel preserved"
+    },
+    {
+      "id": "ice-consistency",
+      "title": "SWIM 0\u20131 m ice consistency",
+      "url": "/terrain/layers/swim-ice-consistency.webp",
+      "file": "frontend/public/terrain/layers/swim-ice-consistency.webp",
+      "format": "webp",
+      "dimensions": [
+        7200,
+        3600
+      ],
+      "sourceDimensions": [
+        7200,
+        2400
+      ],
+      "longitudeRange": [
+        -180,
+        180
+      ],
+      "latitudeCoverage": [
+        -60,
+        60
+      ],
+      "sourceLatitudeCoverage": [
+        -60,
+        60
+      ],
+      "noDataTreatment": "Source -30 sentinel and polar regions are transparent; no-data is not interpolated.",
+      "productType": "Subsurface ice consistency index for the 0\u20131 m depth band",
+      "valueMeaning": "Signed dimensionless SWIM Ci; higher consistency is an indicator, not a calibrated probability or water quantity.",
+      "source": "NASA SWIM 4MIM; SWIM4MIM_Ci_0_1.tif",
+      "sourceUrl": "https://swim.psi.edu/SWIM4MIMProducts.php",
+      "citation": "Putzig et al., Refined Mapping of Subsurface Water Ice on Mars to Support Future Missions, Planetary Science Journal (2025), doi:10.3847/PSJ/ad9b24.",
+      "resolution": "20 ppd source \u00b7 approximately 2.96 km/pixel at the equator",
+      "threshold": {
+        "value": 0.3,
+        "label": "Published positive ice-consistency indicator threshold; not a probability cutoff"
+      },
+      "dataRange": [
+        -0.37437498569488525,
+        1.0
+      ]
     }
   ]
 }

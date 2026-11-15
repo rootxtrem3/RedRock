@@ -19,15 +19,21 @@ const sources = [
   },
   {
     name: 'Daytime thermal',
-    detail: 'THEMIS Day IR global mosaic · 256 ppd source',
+    detail: 'THEMIS Day IR · ASU 100 m regional patches plus 256 ppd global mosaic',
     provider: 'NASA / JPL-Caltech / Arizona State University',
-    url: 'https://www.mars.asu.edu/data/thm_dir/',
+    url: 'https://www.mars.asu.edu/data/thm_dir_100m/',
   },
   {
     name: 'Thermal inertia',
     detail: 'TES nighttime retrieval · Putzig et al. (2005)',
     provider: 'NASA / JPL / Arizona State University',
     url: 'https://www.mars.asu.edu/data/tes_putzigti/nighttime2005/',
+  },
+  {
+    name: 'Shallow ice consistency',
+    detail: 'SWIM 4MIM consistency index · 0–1 m depth band · 20 ppd',
+    provider: 'NASA SWIM project',
+    url: 'https://swim.psi.edu/SWIM4MIMProducts.php',
   },
   {
     name: 'Mineral indicators',

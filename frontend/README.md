@@ -37,11 +37,12 @@ The globe uses locally generated NASA products under `public/terrain/`:
 - **Surface imagery** — 8192×4096 Viking Orbiter color mosaic (ASU Mars Global Data Sets).
 - **Terrain height** — 8192×4096 MOLA MEGDR v2.0 height map at 32 ppd (~2.6 km/pixel), used for real geometric displacement and bump shading of the globe.
 - **Elevation layer** — hypsometric colorization of that height map with subtle northwest relief shading.
-- **Thermal layers** — THEMIS Day IR brightness (8K, 256 ppd published mosaic via the ASU JMARS WMS) and TES nighttime thermal inertia (Putzig et al. 2005, 20 ppd).
+- **Thermal layers** — THEMIS Day IR brightness (256 ppd global overview plus 100 m regional patches at five named sites) and TES nighttime thermal inertia (Putzig et al. 2005, 20 ppd native source).
+- **Shallow ice** — NASA SWIM 4MIM 0–1 m consistency index at its native 20 ppd (~2.96 km/pixel) over 60°S–60°N. The source no-data mask remains transparent; the layer describes consistency, not confirmed or harvestable water.
 - **Mineral layers** — TES sheet-silicate/high-silica-glass and hematite abundance (Bandfield 2002, 4 ppd).
-- **Local detail** — 6×6° THEMIS Day IR patches at 256 ppd with matching MOLA elevation for Jezero, Gale, Elysium, Olympus, and Valles.
+- **Local detail** — MOLA elevation at 128 ppd (~463 m/pixel), THEMIS Day IR at 256 ppd (~232 m/pixel), and separate 100 m THEMIS Day IR detail for Jezero, Gale, Elysium, Olympus, and Valles.
 
-Regenerate the assets with `python3 scripts/prepare_mars_terrain.py` and `python3 scripts/prepare_mars_layer_globes.py`. Both scripts have a hard 5 GiB download budget and cache raw products under `data/mars/raw/`. Scientific values in the interface are curated prototype content; the interface labels uncertain or unavailable local data, and this is not a validated operational navigation system.
+Regenerate the base assets with `python scripts/prepare_mars_terrain.py` and `python scripts/prepare_mars_layer_globes.py`. Prepare the high-resolution regional Day IR patches with `python scripts/prepare_high_resolution_day_ir.py`; this downloads only the requested ASU PGM row bands, not the 22 GB global mosaic. Prepare the SWIM overlay with `python scripts/prepare_swim_layer.py` after setting `RED_ROCK_SWIM_SOURCE` to the downloaded `SWIM4MIM_Ci_0_1.tif`. Other products stay at their native resolution when no finer validated coverage is included. Do not upsample a raster and describe it as finer data.
 
 ## Backend integration
 

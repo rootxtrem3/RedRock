@@ -147,8 +147,17 @@
       ],
       "sources": [
         "NASA Mars Odyssey / THEMIS Day IR Global Mosaic v2.0",
-        "NASA MGS / MOLA MEGDR v2.0"
-      ]
+        "NASA MGS / MOLA MEGDR v2.0",
+        "NASA Mars Odyssey THEMIS Day IR 100 m Global Mosaic v11 (ASU)"
+      ],
+      "dayTemperature": "/terrain/patches/jezero/themis-day-ir-100m.webp",
+      "dayTemperatureResolutionMeters": 99.7,
+      "dayTemperatureDimensions": [
+        3557,
+        3556
+      ],
+      "dayTemperatureSource": "NASA Mars Odyssey THEMIS Day IR 100 m Global Mosaic v11 (ASU)",
+      "dayTemperatureSourceUrl": "https://www.mars.asu.edu/data/thm_dir_100m/"
     },
     "gale": {
       "id": "gale",
@@ -173,8 +182,17 @@
       ],
       "sources": [
         "NASA Mars Odyssey / THEMIS Day IR Global Mosaic v2.0",
-        "NASA MGS / MOLA MEGDR v2.0"
-      ]
+        "NASA MGS / MOLA MEGDR v2.0",
+        "NASA Mars Odyssey THEMIS Day IR 100 m Global Mosaic v11 (ASU)"
+      ],
+      "dayTemperature": "/terrain/patches/gale/themis-day-ir-100m.webp",
+      "dayTemperatureResolutionMeters": 99.7,
+      "dayTemperatureDimensions": [
+        3556,
+        3556
+      ],
+      "dayTemperatureSource": "NASA Mars Odyssey THEMIS Day IR 100 m Global Mosaic v11 (ASU)",
+      "dayTemperatureSourceUrl": "https://www.mars.asu.edu/data/thm_dir_100m/"
     },
     "elysium": {
       "id": "elysium",
@@ -199,8 +217,17 @@
       ],
       "sources": [
         "NASA Mars Odyssey / THEMIS Day IR Global Mosaic v2.0",
-        "NASA MGS / MOLA MEGDR v2.0"
-      ]
+        "NASA MGS / MOLA MEGDR v2.0",
+        "NASA Mars Odyssey THEMIS Day IR 100 m Global Mosaic v11 (ASU)"
+      ],
+      "dayTemperature": "/terrain/patches/elysium/themis-day-ir-100m.webp",
+      "dayTemperatureResolutionMeters": 99.7,
+      "dayTemperatureDimensions": [
+        3557,
+        3556
+      ],
+      "dayTemperatureSource": "NASA Mars Odyssey THEMIS Day IR 100 m Global Mosaic v11 (ASU)",
+      "dayTemperatureSourceUrl": "https://www.mars.asu.edu/data/thm_dir_100m/"
     },
     "olympus": {
       "id": "olympus",
@@ -225,8 +252,17 @@
       ],
       "sources": [
         "NASA Mars Odyssey / THEMIS Day IR Global Mosaic v2.0",
-        "NASA MGS / MOLA MEGDR v2.0"
-      ]
+        "NASA MGS / MOLA MEGDR v2.0",
+        "NASA Mars Odyssey THEMIS Day IR 100 m Global Mosaic v11 (ASU)"
+      ],
+      "dayTemperature": "/terrain/patches/olympus/themis-day-ir-100m.webp",
+      "dayTemperatureResolutionMeters": 99.7,
+      "dayTemperatureDimensions": [
+        3556,
+        3557
+      ],
+      "dayTemperatureSource": "NASA Mars Odyssey THEMIS Day IR 100 m Global Mosaic v11 (ASU)",
+      "dayTemperatureSourceUrl": "https://www.mars.asu.edu/data/thm_dir_100m/"
     },
     "valles": {
       "id": "valles",
@@ -251,8 +287,18 @@
       ],
       "sources": [
         "NASA Mars Odyssey / THEMIS Day IR Global Mosaic v2.0",
-        "NASA MGS / MOLA MEGDR v2.0"
-      ]
+        "NASA MGS / MOLA MEGDR v2.0",
+        "NASA Mars Odyssey THEMIS Day IR 100 m Global Mosaic v11 (ASU)"
+      ],
+      "dayTemperature": "/terrain/patches/valles/themis-day-ir-100m.webp",
+      "dayTemperatureResolutionMeters": 99.7,
+      "dayTemperatureDimensions": [
+        3557,
+        3557
+      ],
+      "dayTemperatureSource": "NASA Mars Odyssey THEMIS Day IR 100 m Global Mosaic v11 (ASU)",
+      "dayTemperatureSourceUrl": "https://www.mars.asu.edu/data/thm_dir_100m/"
     }
-  }
+  },
+  "regionalLayerNote": "The 100 m THEMIS Day IR mosaic is served only as five native-resolution regional patches. The global overlay remains the 256 ppd mosaic resampled for the globe."
 }

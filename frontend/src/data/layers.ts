@@ -13,7 +13,7 @@ export type LayerDefinition = {
   id: LayerId
   label: string
   shortLabel: string
-  group: 'Base' | 'Terrain' | 'Thermal' | 'Minerals'
+  group: 'Base' | 'Terrain' | 'Thermal' | 'Resources' | 'Minerals'
   note: string
   /** Globe overlay texture. The visual base layer is rendered separately. */
   texture: string | null
@@ -35,27 +35,27 @@ export const LAYER_DEFINITIONS: Record<LayerId, LayerDefinition> = {
     label: 'Visual Mars',
     shortLabel: 'Imagery',
     group: 'Base',
-    note: 'Viking / JPL mosaic',
+    note: 'Viking global · THEMIS regional detail',
     texture: null,
     opacity: 1,
     source: 'NASA Viking Orbiter color mosaic / ASU Mars Global Data Sets',
     sourceUrl: 'https://www.mars.asu.edu/data/mdim_color/',
-    resolution: '8K globe · ~2.6 km/pixel',
+    resolution: 'Global 8K · ~2.6 km/pixel; regional THEMIS Day IR patches · ~232 m/pixel',
     description:
-      'Colour mosaic from the Viking Orbiter imagers, resampled to a full-globe equirectangular texture.',
+      'Global color mosaic from the Viking Orbiter imagers, resampled to an 8K equirectangular texture. Over five named regions, close views use a THEMIS Day IR context patch (thermal infrared, not visible-color imagery).',
   },
   elevation: {
     id: 'elevation',
     label: 'Elevation',
     shortLabel: 'Elevation',
     group: 'Terrain',
-    note: 'MOLA · 32 ppd',
+    note: 'MOLA · 32 ppd global / 128 ppd regional',
     texture: '/terrain/global/mola-elevation.webp',
     opacity: 1,
     source: 'NASA MGS MOLA MEGDR v2.0 / PDS Geosciences Node',
     sourceUrl:
       'https://pds-geosciences.wustl.edu/mgs/mgs-m-mola-5-megdr-l3-v1/mgsl_300x/',
-    resolution: '8K elevation · 32 ppd MOLA source',
+    resolution: 'Global 8K · ~2.6 km/pixel; five regional patches · 128 ppd (~463 m/pixel)',
     description:
       'Hypsometric color ramp over the measured MOLA global topography, with subtle northwest relief shading. The same 8K height map displaces the globe geometry, so relief is real rather than painted. Elevation is referenced to the Mars datum; negative values mark basins below it.',
     legend: {
@@ -103,15 +103,15 @@ export const LAYER_DEFINITIONS: Record<LayerId, LayerDefinition> = {
     label: 'Day IR brightness',
     shortLabel: 'Thermal',
     group: 'Thermal',
-    note: 'THEMIS · 256 ppd',
+    note: 'THEMIS · 100 m regional / 256 ppd global',
     texture: '/terrain/layers/themis-day-ir.webp',
     opacity: 1,
     source:
       'NASA/JPL-Caltech/Arizona State University, Mars Odyssey THEMIS Day IR Global Mosaic v2.0',
-    sourceUrl: 'https://www.mars.asu.edu/data/thm_dir/',
-    resolution: '8K globe · 22.8 ppd from a 256 ppd published mosaic',
+    sourceUrl: 'https://www.mars.asu.edu/data/thm_dir_100m/',
+    resolution: '100 m at five named regions · 256 ppd published global source resampled to 8K',
     description:
-      'Daytime thermal infrared (12.57 µm) brightness mosaic. The published product is an 8-bit relative brightness image, so it is shown as a thermal ramp rather than as calibrated kinetic temperature. No-data gores stay transparent.',
+      'Daytime thermal infrared (12.57 µm) relative-brightness mosaic. Native 100 m ASU patches load over Jezero, Gale, Elysium, Olympus, and Valles; the global view uses the 256 ppd mosaic resampled to an 8K texture. This is not calibrated kinetic temperature. Source no-data stays transparent.',
     legend: {
       stops: [
         '#09081c',
@@ -125,7 +125,7 @@ export const LAYER_DEFINITIONS: Record<LayerId, LayerDefinition> = {
       low: 'COOL / DARK',
       high: 'WARM / BRIGHT',
       unit: 'Relative day-IR brightness',
-      caption: 'THEMIS 12.57 µm daytime mosaic',
+      caption: 'THEMIS 12.57 µm · 100 m at the five regional patches',
     },
   },
   'thermal-inertia': {
@@ -148,6 +148,27 @@ export const LAYER_DEFINITIONS: Record<LayerId, LayerDefinition> = {
       high: 'HIGH · rock-like',
       unit: 'Thermal inertia (published color scale)',
       caption: 'TES nighttime retrieval · not a temperature map',
+    },
+  },
+  'ice-consistency': {
+    id: 'ice-consistency',
+    label: 'Shallow ice consistency (SWIM)',
+    shortLabel: 'Ice consistency',
+    group: 'Resources',
+    note: 'SWIM · 20 ppd · 60°S–60°N',
+    texture: '/terrain/layers/swim-ice-consistency.webp',
+    opacity: 0.9,
+    source: 'NASA SWIM 4MIM · 0–1 m consistency raster',
+    sourceUrl: 'https://swim.psi.edu/SWIM4MIMProducts.php',
+    resolution: '20 ppd source · ~2.96 km/pixel at equator · 60°S–60°N',
+    description:
+      'Signed SWIM consistency index for possible ice in the 0–1 m depth band. Values at or above 0.3 are a published positive indicator threshold, not a probability or confirmation of accessible water. Coverage and no-data gaps remain transparent.',
+    legend: {
+      stops: ['#252530', '#3b5b7e', '#30a0b4', '#7ccfbb', '#f7da84'],
+      low: 'LOWER CONSISTENCY',
+      high: 'HIGHER CONSISTENCY',
+      unit: 'Dimensionless SWIM Ci',
+      caption: 'Ci ≥ 0.3 is a published indicator threshold, not a probability',
     },
   },
   'hydrated-minerals': {

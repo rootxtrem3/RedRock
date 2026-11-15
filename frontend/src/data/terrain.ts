@@ -9,8 +9,10 @@ export type TerrainPatchDefinition = {
   texture: string
   height: string
   elevation: string
+  dayTemperature?: string
   imageryResolutionMeters: number
   elevationResolutionMeters: number
+  dayTemperatureResolutionMeters?: number
 }
 
 export const MOLA_ELEVATION_MIN_METERS = -8177
@@ -33,8 +35,10 @@ export const TERRAIN_PATCHES: Record<string, TerrainPatchDefinition> = {
     texture: '/terrain/patches/jezero/themis.webp',
     height: '/terrain/patches/jezero/mola-height.png',
     elevation: '/terrain/patches/jezero/mola-elevation.webp',
+    dayTemperature: '/terrain/patches/jezero/themis-day-ir-100m.webp',
     imageryResolutionMeters: 231.55,
     elevationResolutionMeters: 463.1,
+    dayTemperatureResolutionMeters: 99.7,
   },
   gale: {
     id: 'gale',
@@ -42,8 +46,10 @@ export const TERRAIN_PATCHES: Record<string, TerrainPatchDefinition> = {
     texture: '/terrain/patches/gale/themis.webp',
     height: '/terrain/patches/gale/mola-height.png',
     elevation: '/terrain/patches/gale/mola-elevation.webp',
+    dayTemperature: '/terrain/patches/gale/themis-day-ir-100m.webp',
     imageryResolutionMeters: 231.55,
     elevationResolutionMeters: 463.1,
+    dayTemperatureResolutionMeters: 99.7,
   },
   elysium: {
     id: 'elysium',
@@ -51,8 +57,10 @@ export const TERRAIN_PATCHES: Record<string, TerrainPatchDefinition> = {
     texture: '/terrain/patches/elysium/themis.webp',
     height: '/terrain/patches/elysium/mola-height.png',
     elevation: '/terrain/patches/elysium/mola-elevation.webp',
+    dayTemperature: '/terrain/patches/elysium/themis-day-ir-100m.webp',
     imageryResolutionMeters: 231.55,
     elevationResolutionMeters: 463.1,
+    dayTemperatureResolutionMeters: 99.7,
   },
   olympus: {
     id: 'olympus',
@@ -60,8 +68,10 @@ export const TERRAIN_PATCHES: Record<string, TerrainPatchDefinition> = {
     texture: '/terrain/patches/olympus/themis.webp',
     height: '/terrain/patches/olympus/mola-height.png',
     elevation: '/terrain/patches/olympus/mola-elevation.webp',
+    dayTemperature: '/terrain/patches/olympus/themis-day-ir-100m.webp',
     imageryResolutionMeters: 231.55,
     elevationResolutionMeters: 463.1,
+    dayTemperatureResolutionMeters: 99.7,
   },
   valles: {
     id: 'valles',
@@ -69,8 +79,10 @@ export const TERRAIN_PATCHES: Record<string, TerrainPatchDefinition> = {
     texture: '/terrain/patches/valles/themis.webp',
     height: '/terrain/patches/valles/mola-height.png',
     elevation: '/terrain/patches/valles/mola-elevation.webp',
+    dayTemperature: '/terrain/patches/valles/themis-day-ir-100m.webp',
     imageryResolutionMeters: 231.55,
     elevationResolutionMeters: 463.1,
+    dayTemperatureResolutionMeters: 99.7,
   },
 }
 
