@@ -4,12 +4,23 @@ An immersive 3D Mars exploration and safety-planning interface built with React,
 
 ## Run locally
 
+Start the API in one terminal:
+
 ```bash
+cd ../backend
+npm ci
+npm run dev
+```
+
+Then start the frontend in a second terminal:
+
+```bash
+cp .env.example .env.local
 npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite.
+Open the local URL printed by Vite. The example `.env.local` sends Vite's `/api` proxy to `VITE_API_PROXY_TARGET`; change that value if the local backend uses another port. This proxy setting is development-only and is not shipped to browser code. For Vercel, configure `VITE_API_BASE_URL` in the frontend project's environment settings with the deployed backend origin (for example, `https://your-api.vercel.app`, without a trailing slash). The frontend calls that origin directly, so allow the deployed frontend origin in the backend's CORS settings. Keep `VITE_API_BASE_URL` blank when serving frontend and API from the same origin.
 
 ## Validation
 
@@ -46,4 +57,4 @@ Regenerate the base assets with `python scripts/prepare_mars_terrain.py` and `py
 
 ## Backend integration
 
-The frontend API contract, component map, raster coverage, and integration notes are documented in [`BACKEND_HANDOFF.md`](./BACKEND_HANDOFF.md). Set `VITE_API_BASE_URL` when the API is hosted on a different origin. Route plans and temperature estimates are supplied by the backend; the frontend displays them with provenance and unavailable states.
+The frontend API contract, component map, raster coverage, and integration notes are documented in [`BACKEND_HANDOFF.md`](./BACKEND_HANDOFF.md). Route plans and science values come from the backend; values the prepared datasets cannot support remain explicitly unavailable.

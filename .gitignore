@@ -2,6 +2,31 @@
 data/mars/raw/
 backend/node_modules/
 backend/dist/
+backend-debug.err
+backend-debug.log
+backend-laptop.err
+backend-laptop.log
+backend-preview.err
+backend-preview.log
+backend-rerun.err
+backend-rerun.log
+backend-session.err
+backend-session.log
+backend-start.err
+backend-start.log
+frontend-debug.err
+frontend-debug.log
+frontend-laptop.err
+frontend-laptop.log
+frontend-preview.err
+frontend-preview.log
+frontend-rerun.err
+frontend-rerun.log
+frontend-session.err
+frontend-session.log
+brag-output-*/
+frontend/src/data/backend.local-source.ts
+frontend/public/terrain/patches/patches/
 
 # Python tooling
 __pycache__/

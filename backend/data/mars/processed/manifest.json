@@ -1,0 +1,105 @@
+{
+  "project": "RED ROCK",
+  "generated_date": "2026-11-14",
+  "team_dataset_cutoff": "2026-11-03",
+  "grid": {
+    "width": 3600,
+    "height": 1800,
+    "row_0": "90N; rows proceed south",
+    "col_0": "180W; columns proceed east",
+    "cell_degrees": 0.1,
+    "mars_radius_m_for_terrain_derivatives": 3396190.0,
+    "cell_size_equator_m": 5927.6,
+    "site_indexing": "row=floor((90-lat)/0.1); col=floor((lon_east+180)/0.1), with longitude wrapped to [-180,180)"
+  },
+  "datasets": [
+    {
+      "id": "mola_elevation",
+      "path": "elevation_m_mola_3600x1800.npy",
+      "dtype": "int16 little-endian",
+      "units": "m",
+      "no_data": -32768,
+      "source": "Data/raw_asu_usgs/mola_dem/Mars_MGS_MOLA_DEM_mosaic_global_463m.tif",
+      "source_url": "https://planetarymaps.usgs.gov/mosaic/Mars_MGS_MOLA_DEM_mosaic_global_463m.tif",
+      "method": "Nearest source MOLA pixel to each 0.1-degree grid-cell center; original source retained.",
+      "resolution_note": "Coarse global grid for lookups and overview. Use source 463 m GeoTIFF for detailed regional route analysis.",
+      "sha256": "f41d822918ea80cd9a50afcdb83fea52100a68b4ff1886f11a64810bcc8fa640",
+      "bytes": 12960080
+    },
+    {
+      "id": "mola_slope",
+      "path": "slope_degrees_mola_3600x1800.npy",
+      "dtype": "float32 little-endian",
+      "units": "degrees",
+      "no_data": -9999.0,
+      "source": "Derived from mola_elevation using centered finite differences and latitude-adjusted east-west distance.",
+      "resolution_note": "Coarse global slope indicator; polar rows beyond 85 degrees are masked.",
+      "sha256": "072cad57afec5d712a5eb6b23592ee1322c9b0e17b6b7fe56dbbcd0f233ee9f3",
+      "bytes": 25920080
+    },
+    {
+      "id": "mola_local_relief",
+      "path": "local_relief_m_mola_3600x1800.npy",
+      "dtype": "float32 little-endian",
+      "units": "m",
+      "no_data": -9999.0,
+      "source": "Derived as the elevation range in a 3x3 neighborhood of the coarse MOLA grid.",
+      "resolution_note": "Local relief proxy at coarse grid scale, not a geologic roughness measurement.",
+      "sha256": "c90f47fff60dad86596288395b8d55ae9cafe7379e968cabbd1e3d5ebe2d75c2",
+      "bytes": 25920080
+    },
+    {
+      "id": "swim_ci_0_1m",
+      "path": "swim_ci_0_1m_3600x1800.npy",
+      "dtype": "float32 little-endian",
+      "units": "dimensionless consistency index",
+      "no_data": -30.0,
+      "source": "Data/raw_asu_usgs/swim_water_ice/SWIM4MIM_Ci_0_1.tif",
+      "source_url": "https://swim.psi.edu/SWIM4MIMProducts.php",
+      "method": "Nearest source pixel to each 0.1-degree global grid-cell center; outside 60S-60N set to source no-data value.",
+      "interpretation": "SWIM ice-consistency indicator for 0-1 m depth, not water volume or a calibrated probability. Preserve signed values and no-data mask.",
+      "sha256": "6e6acaa6b2d73e1b4720b839d3134277b36348d5cf5cec674e18bc7f4b554f26",
+      "bytes": 25920080
+    },
+    {
+      "id": "seasonal_solar_model",
+      "path": "seasonal_solar_mcd_v6_2.json",
+      "format": "JSON",
+      "records": 20,
+      "units": "W/m2 instantaneous modeled surface flux",
+      "source_url": "https://www-mars.lmd.jussieu.fr/mcd_python/",
+      "model": "Mars Climate Database v6.2; climatology average solar scenario",
+      "method": "Five map anchors x four solar longitudes; local solar noon; horizontal and high-resolution local-slope flux; 10 m above local surface.",
+      "interpretation": "Model output, not daily energy yield or delivered panel power.",
+      "sha256": "41693f87815ff26192ff0bd7d8ae7cc6e3d4c1ef3027259700f10cbdea0d1483",
+      "bytes": 15496
+    }
+  ],
+  "reference_only": [
+    {
+      "id": "curiosity_rad_gale_timeseries",
+      "path": "Data/radiation_curiosity_rad/doseE_sol_filter_update.txt",
+      "source_url": "https://zenodo.org/records/20536564",
+      "status": "raw reference; header/record column mismatch needs confirmation before parsing",
+      "scope": "Curiosity rover site in Gale Crater only; not a global radiation map"
+    }
+  ],
+  "not_for_scientific_api": [
+    "Data/grids/elevation_m_3600x1800.npy",
+    "Data/grids/roughness_norm_3600x1800.npy",
+    "Data/grids/thermal_inertia_3600x1800.npy",
+    "Data/grids/dust_index_3600x1800.npy",
+    "Data/grids/temp_mean_c_3600x1800.npy",
+    "Data/grids/temp_day_c_3600x1800.npy",
+    "Data/grids/temp_night_c_3600x1800.npy",
+    "Data/grids/water_ice_3600x1800.npy",
+    "Data/grids/radiation_msv_3600x1800.npy",
+    "Data/grids/pressure_kpa_3600x1800.npy",
+    "Data/grids/mineral_hematite_3600x1800.npy",
+    "Data/grids/mineral_olivine_3600x1800.npy",
+    "Data/grids/mineral_pyroxene_3600x1800.npy",
+    "Data/grids/mineral_hydrated_minerals_3600x1800.npy"
+  ],
+  "site_samples": "site_samples.json",
+  "site_samples_sha256": "31a5dc6ff62849015f40b0777e853423112534560fbc9f75102d55f2424af22e"
+}

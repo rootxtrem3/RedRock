@@ -46,6 +46,7 @@ const TERRAIN_DISPLACEMENT_BIAS =
   (MOLA_ELEVATION_MIN_METERS / MARS_MEAN_RADIUS_METERS) * MARS_RADIUS
 
 type MarsGlobeProps = {
+  zoom: number
   selected: MarsLocation | null
   station: Station
   cameraAction: CameraAction
@@ -383,7 +384,7 @@ function StationMarker({
   return <MapLocationPin position={position} prominent color="#C7654C" depthTest={false} />
 }
 
-function Route({ plan }: { plan: BackendRoutePlan }) {
+function Route({ plan, zoom }: { plan: BackendRoutePlan; zoom: number }) {
   const points = useMemo(
     () => plan.points.map((point) => {
       const elevation = point.elevationMeters ?? 0
@@ -413,7 +414,7 @@ function Route({ plan }: { plan: BackendRoutePlan }) {
       />
       {waypoints.map((point, index) => (
           <mesh key={index} position={point}>
-            <sphereGeometry args={[0.0022, 12, 12]} />
+            <sphereGeometry args={[MathUtils.clamp(0.0022 * 2 ** ((5.1 - zoom) / 5), 0.00055, 0.0035), 12, 12]} />
             <meshBasicMaterial color="#e8e2d8" />
           </mesh>
         ))}
@@ -637,7 +638,7 @@ function GlobeScene(props: MarsGlobeProps) {
       )}
       <StationMarker station={props.station} heightImage={heightImage} />
       {props.routeVisible && props.routePlan && (
-        <Route plan={props.routePlan} />
+        <Route plan={props.routePlan} zoom={props.zoom} />
       )}
       <CameraRig
         selected={props.selected}

@@ -9,7 +9,6 @@ import {
   Route,
   Shield,
   Sun,
-  Thermometer,
   TriangleAlert,
   Wind,
 } from 'lucide-react'
@@ -20,12 +19,14 @@ import {
 } from '../data/marsData'
 import type { MarsLocation, Station } from '../types'
 import type { BackendLocationAnalysis, BackendRoutePlan } from '../data/backend'
+import { SeasonalSolarPanel } from './SeasonalSolarPanel'
+import { useThemisPixelSample } from '../data/themisSample'
 
 type RouteVariant = 'recommended' | 'shorter' | 'resource'
 const ROUTE_VARIANTS: Array<{ id: RouteVariant; label: string }> = [
   { id: 'recommended', label: 'Balanced' },
   { id: 'shorter', label: 'Shortest' },
-  { id: 'resource', label: 'Resource-oriented' },
+  { id: 'resource', label: 'SWIM consistency' },
 ]
 
 function formatHours(hours: number | null | undefined) {
@@ -71,6 +72,7 @@ export function SurvivalPanel({
   onSources,
 }: SurvivalPanelProps) {
   const [activeTab, setActiveTab] = useState<GuideTab>('Environment')
+  const themisSample = useThemisPixelSample(location.lat, location.lon)
   const hazards = analysis?.hazards !== undefined
     ? analysis.hazards.map((hazard) => ({
         name: hazard.name,
@@ -127,17 +129,18 @@ export function SurvivalPanel({
           </div>
           <div className="environment-grid">
             <article className="environment-primary">
-              <Thermometer size={17} />
-              <span>Prototype catalog temperature</span>
-              <strong>{location.temperature}</strong>
+              <Sun size={17} />
+              <span>THEMIS Day IR pixel</span>
+              <strong>{themisSample === undefined ? 'Loading…' : themisSample.kind === 'no-coverage' ? 'No coverage' : themisSample.kind === 'load-error' ? 'Image failed to load' : `RGB ${themisSample.rgb.join(' / ')}`}</strong>
             </article>
-            <article><Gauge size={16} /><span>Pressure</span><strong>{analysis?.surfacePressurePa?.value == null ? 'Unavailable' : `${analysis.surfacePressurePa.value.toLocaleString()} ${analysis.surfacePressurePa.unit ?? 'Pa'}`}</strong></article>
+            <article><Gauge size={16} /><span>MOLA slope</span><strong>{analysis?.slopeDegrees?.value == null ? 'No coverage' : `${analysis.slopeDegrees.value.toFixed(1)}°`}</strong></article>
             <article><Navigation size={16} /><span>Gravity</span><strong>3.71 m/s²</strong></article>
-            <article><Sun size={16} /><span>Solar flux</span><strong>{analysis?.solarFlux?.value == null ? 'Unavailable' : `${analysis.solarFlux.value.toLocaleString()} ${analysis.solarFlux.unit ?? 'W/m²'}`}</strong></article>
-            <article><Wind size={16} /><span>Dust opacity</span><strong>{analysis?.dustOpacity?.value == null ? 'Unavailable' : `${analysis.dustOpacity.value} ${analysis.dustOpacity.unit ?? ''}`}</strong></article>
+            <article><Sun size={16} /><span>Seasonal solar flux</span><strong>See MCD samples below</strong></article>
+            <article><Wind size={16} /><span>SWIM consistency · 0–1 m</span><strong>{analysis?.iceConsistency01m?.value == null ? 'No coverage' : `Ci ${analysis.iceConsistency01m.value.toFixed(3)}`}</strong></article>
           </div>
-          <ThermalEstimate analysis={analysis} loading={analysisLoading} />
-          <p className="data-caveat">Orbital and mission observations. Conditions vary by season and local solar time.</p>
+          <SeasonalSolarPanel location={location} />
+          <ThemisObservation sample={themisSample} />
+          <p className="data-caveat">MOLA slope is a coarse global indicator, SWIM Ci is an ice-consistency index rather than water certainty, and THEMIS pixels are colorized brightness—not temperature. MCD solar flux is modeled at local noon.</p>
         </section>
 
         <section className="guide-section" id="guide-hazards" role="tabpanel" aria-labelledby="guide-tab-hazards" hidden={activeTab !== 'Hazards'}>
@@ -195,7 +198,7 @@ export function SurvivalPanel({
 
         <section className="guide-section" id="guide-travel" role="tabpanel" aria-labelledby="guide-tab-travel" hidden={activeTab !== 'Travel'}>
           <div className="guide-section-heading">
-            <span>04</span><div><small>Surface mobility</small><h4>Travel & shelter</h4></div>
+            <span>04</span><div><small>Surface mobility</small><h4>{routeVariant === 'resource' ? 'Prospect route' : 'Travel & shelter'}</h4></div>
           </div>
           <div className="travel-advice-grid">
             <article><Route size={17} /><strong>Traverse</strong><p>Avoid abrupt elevation changes and exposed sediment margins.</p></article>
@@ -227,21 +230,37 @@ export function SurvivalPanel({
           </div>
           <div className="emergency-callout">
             <TriangleAlert size={19} />
-            <div><strong>If mobility is lost</strong><p>Follow verified backend waypoint guidance when available. Until then, use established mission contingency procedures; this prototype does not identify validated refuge points.</p></div>
+            <div><strong>If mobility is lost</strong><p>Use established mission contingency procedures. Route waypoints here are exploratory map outputs, not verified navigation instructions, and this prototype does not identify validated refuge points.</p></div>
           </div>
         </section>
 
         {activeTab === 'Travel' && <section className="guide-section return-section" id="guide-return">
           <div className="guide-section-heading">
-            <span>07</span><div><small>Safety-first navigation</small><h4>Return to station</h4></div>
+            <span>07</span><div><small>Exploratory route planning</small><h4>{routeVariant === 'resource' ? 'Route to a SWIM consistency cell' : 'Route to station'}</h4></div>
           </div>
 
           <div className="route-endpoints">
             <div><span>Current</span><strong>{location.name}</strong><small>{formatLatitude(location.lat)} · {formatLongitude(location.lon)}</small></div>
             <div className="route-connector"><i /><ChevronRight size={15} /><i /></div>
-            <button type="button" onClick={onChooseStation}>
-              <span>Destination <em>Change</em></span><strong>{station.name}</strong><small>{formatLatitude(station.lat)} · {formatLongitude(station.lon)}</small>
-            </button>
+            {(routePlan?.variant === 'resource' && routePlan.destination?.type === 'swim-cell') ? (
+              <div className="route-destination">
+                <span>Destination</span>
+                <strong>SWIM consistency cell</strong>
+                <small>{formatLatitude(routePlan.destination.lat)} · {formatLongitude(routePlan.destination.lon)}</small>
+                {routePlan.destination.swimCi01m != null && <small>Consistency index {routePlan.destination.swimCi01m.toFixed(2)} · {routePlan.destination.swimCi01m >= 0.3 ? 'positive indicator, not confirmed water' : 'below 0.3 positive-indicator threshold'}</small>}
+                {routePlan.destination.straightLineDistanceKm != null && <small>{routePlan.destination.straightLineDistanceKm.toFixed(1)} km straight-line from start</small>}
+              </div>
+            ) : routeVariant === 'resource' ? (
+              <div className="route-destination">
+                <span>Destination</span>
+                <strong>Nearby SWIM consistency cell</strong>
+                <small>Route target is selected from reachable cells; it may be below the positive-indicator threshold.</small>
+              </div>
+            ) : (
+              <button type="button" onClick={onChooseStation}>
+                <span>Destination <em>Change</em></span><strong>{station.name}</strong><small>{formatLatitude(station.lat)} · {formatLongitude(station.lon)}</small>
+              </button>
+            )}
           </div>
 
           {routeBusy ? (
@@ -249,7 +268,7 @@ export function SurvivalPanel({
           ) : !routeVisible || !routePlan ? (
             <>
               {routeError && <p className="thermal-estimate-empty" role="alert">Route unavailable: {routeError}</p>}
-            <button type="button" className="primary-action wide calculate-route" onClick={onCalculateRoute}>
+            <button type="button" className="primary-action wide calculate-route" onClick={() => onCalculateRoute()}>
               <Navigation size={16} /> Request route plan
             </button>
             </>
@@ -270,7 +289,7 @@ export function SurvivalPanel({
                     onClick={() => onRouteVariant(route.id)}
                   >
                     <span className="route-option-radio">{routeVariant === route.id && <i />}</span>
-                    <span className="route-option-copy"><em>{route.label}</em><small>Recalculate with backend</small></span>
+                    <span className="route-option-copy"><em>{route.label}</em><small>{routeVariant === route.id ? 'Current plan' : 'Calculate this route'}</small></span>
                   </button>
                 ))}
               </div>
@@ -285,37 +304,24 @@ export function SurvivalPanel({
   )
 }
 
-function ThermalEstimate({
-  analysis,
-  loading,
+function ThemisObservation({
+  sample,
 }: {
-  analysis: BackendLocationAnalysis | null
-  loading: boolean
+  sample: ReturnType<typeof useThemisPixelSample>
 }) {
-  const inertia = analysis?.thermalInertia
-  const estimate = analysis?.surfaceTemperature
-
   return (
-    <section className="thermal-estimate" aria-label="Backend thermal analysis">
+    <section className="thermal-estimate" aria-label="THEMIS daytime thermal-infrared observation">
       <div className="thermal-estimate-heading">
-        <div><span>BACKEND MODEL</span><strong>Thermal conditions</strong></div>
-        <Thermometer size={15} />
+        <div><span>ORBITAL OBSERVATION</span><strong>Daytime infrared at this point</strong></div>
+        <Sun size={15} />
       </div>
       <div className="thermal-estimate-results">
-        <div><span>Thermal inertia</span><strong>{inertia?.value == null ? 'Unavailable' : `${inertia.value} ${inertia.unit ?? 'J m⁻² K⁻¹ s⁻½'}`}</strong></div>
-        <div><span>Estimated at requested conditions</span><strong>{estimate?.currentCelsius == null ? 'Unavailable' : `${estimate.currentCelsius.toFixed(0)}°C`}</strong></div>
-        <div><span>Modeled range</span><strong>{estimate?.minimumCelsius == null || estimate.maximumCelsius == null ? 'Unavailable' : `${estimate.minimumCelsius.toFixed(0)}° to ${estimate.maximumCelsius.toFixed(0)}°C`}</strong></div>
+        <div><span>Sampled image pixel</span><strong>{sample === undefined ? 'Loading…' : sample.kind === 'no-coverage' ? 'No coverage' : sample.kind === 'load-error' ? 'Image failed to load' : `RGB ${sample.rgb.join(' / ')}`}</strong></div>
+        <div><span>Source resolution</span><strong>{sample?.kind === 'sample' ? sample.resolution : 'THEMIS Day IR'}</strong></div>
+        <div><span>Surface temperature</span><strong>Not inferred from image color</strong></div>
       </div>
-      {loading && <p className="thermal-estimate-empty" role="status">Requesting site thermal analysis…</p>}
-      {!loading && !estimate && <p className="thermal-estimate-empty">No backend estimate is available for this location and season.</p>}
-      {estimate && (
-        <>
-          <p className="thermal-estimate-caveat">{estimate.modelName}. Ls {estimate.seasonLsDegrees}°, local solar time {estimate.localSolarTimeHours.toFixed(1)} h. {estimate.caveat}</p>
-          {estimate.assumptions.length > 0 && <p className="thermal-estimate-caveat">Assumptions: {estimate.assumptions.join('; ')}.</p>}
-          {estimate.sourceName && estimate.sourceUrl && <a className="thermal-estimate-source" href={estimate.sourceUrl} target="_blank" rel="noreferrer">{estimate.sourceName} ↗</a>}
-        </>
-      )}
-      {!loading && analysis?.unknowns?.map((unknown) => <p className="thermal-estimate-caveat" key={unknown}>Unknown: {unknown}</p>)}
+      <p className="thermal-estimate-caveat">{sample?.kind === 'sample' ? sample.product : 'NASA/JPL-Caltech/Arizona State University THEMIS Day IR'}; daytime 12.57 µm thermal-infrared brightness mosaic. This sampled RGB is a colorized display pixel, not a calibrated temperature in °C.</p>
+      <a className="thermal-estimate-source" href="https://www.mars.asu.edu/data/thm_dir/" target="_blank" rel="noreferrer">THEMIS Day IR source ↗</a>
     </section>
   )
 }

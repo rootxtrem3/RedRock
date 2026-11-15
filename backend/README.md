@@ -41,6 +41,8 @@ Ice-prospect radius is limited to 200 km and result count to 50. `min_ci` defaul
 
 There is no validated global temperature, surface-radiation, or quantitative-mineral grid in the prepared bundle. The API reports those as unavailable instead of returning synthetic maps. Seasonal solar values are modeled local-noon samples at the five anchors, not daily energy or panel output.
 
+Location analysis also returns `roughnessProxy`, which is the MOLA 3×3-cell elevation range (~0.1° grid scale), explicitly not rover-scale surface roughness. `surfacePressurePa` is a low-confidence reference-atmosphere estimate `636 Pa × exp(−elevation / 11,000 m)` based on NASA Mars Fact Sheet mean-radius pressure and scale height; it is not a local observation or Mars GCM result and omits seasonal, diurnal, and weather variability. `seasonalSolarSamples` is populated only when the requested point is within 1 km of a named site anchor; it contains that anchor's MCD records and is not interpolated to arbitrary coordinates. Temperature, thermal inertia, dust opacity, and radiation remain unavailable where no valid prepared product exists.
+
 ## Frontend integration
 
 The Vite client reads `VITE_API_BASE_URL` from `frontend/.env`; leave it empty for a same-origin reverse proxy. During local development, the backend permits `http://localhost:5173` and `http://127.0.0.1:5173`. See [`frontend/BACKEND_HANDOFF.md`](../frontend/BACKEND_HANDOFF.md) for the response contract and UI mapping.

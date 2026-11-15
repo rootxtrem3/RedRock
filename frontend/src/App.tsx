@@ -275,6 +275,7 @@ function App() {
   return (
     <main className={`app-shell ${guideOpen ? 'guide-active' : ''} ${routeVisible ? 'route-active' : ''}`}>
       <MarsGlobe
+        zoom={zoom}
         selected={selected}
         station={activeStation}
         cameraAction={cameraAction}
@@ -328,7 +329,9 @@ function App() {
         </nav>
 
         <div className="nav-operations">
-          <div className="system-state"><span /><div><small>LINK</small><strong>ACTIVE</strong></div></div>
+          <div className="system-state" aria-label="NASA orbital data sources">
+            <div><small>SOURCES</small><strong>NASA</strong></div>
+          </div>
           <SearchNavigator ref={searchRef} locations={locations} onSelect={selectLocation} />
         </div>
       </header>
@@ -337,7 +340,7 @@ function App() {
         <section className="planet-intro panel-enter" aria-label="Mars planetary view">
           <span className="intro-index">01 / PLANETARY VIEW</span>
           <h1>Mars</h1>
-          <p>Explore the surface. Assess the risk.<br />Find a safe route home.</p>
+          <p>Explore the surface. Assess the terrain.<br />Plan an exploratory route.</p>
           <div className="intro-instruction"><Target size={15} /><span>Search or select a point on the globe</span></div>
         </section>
       )}
@@ -346,7 +349,6 @@ function App() {
         <LocationPanel
           location={selected}
           analysis={locationAnalysis}
-          analysisLoading={analysisLoading}
           expanded={detailExpanded}
           onExpand={() => setDetailExpanded(true)}
           onCollapse={() => setDetailExpanded(false)}
@@ -400,7 +402,7 @@ function App() {
       <section className="orbital-data-widget" aria-label="Orbital data quick layers">
         <div className="orbital-widget-head">
           <Satellite size={15} />
-          <div><strong>Mars orbital data</strong><span>LIVE DATASET 04</span></div>
+          <div><strong>Mars orbital data</strong><span>STATIC MAP LAYERS</span></div>
         </div>
         <div className="quick-layers">
           {QUICK_LAYERS.map(({ id, label }) => (

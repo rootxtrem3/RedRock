@@ -171,6 +171,17 @@ export function createApp(store = new MarsDataStore()) {
     const slope = sample.terrain.mola_slope
     const relief = sample.terrain.mola_local_relief
     const ice = sample.ice.ci_0_1m
+    // Hydrostatic reference-pressure approximation corrected for Mars' varying
+    // gravity with areoid-relative elevation; still omits seasonal GCM effects.
+    const pressureEstimate = elevation.value === null
+      ? null
+      : 636 * Math.exp(-3.71 * elevation.value / (188.92 * 210))
+    const nearestSolarSite = store.siteSamples
+      .map((site) => ({ site, distanceKm: distanceKm({ lat, lon_east: lon }, { lat: site.lat, lon_east: site.lon_east }) }))
+      .sort((a, b) => a.distanceKm - b.distanceKm)[0]
+    const localSolarSamples = nearestSolarSite && nearestSolarSite.distanceKm <= 1
+      ? store.solarBySite.get(nearestSolarSite.site.id) ?? []
+      : []
     const hazards = []
     if (slope.value !== null) hazards.push({ name: 'Slope', level: slope.value >= 15 ? 'high' : slope.value >= 8 ? 'medium' : 'low', evidence: { value: `${slope.value.toFixed(1)}° slope on a coarse MOLA grid`, unit: 'degrees', evidenceKind: 'published-map', sourceName: 'MOLA derived slope', coverage: 'global', confidence: 'moderate', resolution: '0.1° grid', caveat: 'Not a rover-scale hazard survey.' } })
     if (ice !== null) hazards.push({ name: 'Subsurface ice uncertainty', level: ice >= 0.3 ? 'medium' : 'unknown', evidence: { value: `SWIM consistency index ${ice.toFixed(3)}`, unit: 'dimensionless', evidenceKind: 'published-map', sourceName: 'NASA SWIM 4MIM 0–1 m', sourceUrl: 'https://swim.psi.edu/SWIM4MIMProducts.php', coverage: 'global', confidence: 'low', resolution: '20 ppd (~2.96 km/pixel)', caveat: 'Consistency is not confirmation of accessible water.' } })
@@ -180,15 +191,53 @@ export function createApp(store = new MarsDataStore()) {
       elevationMeters: datasetValue('mola_elevation', elevation),
       slopeDegrees: datasetValue('mola_slope', slope),
       localReliefMeters: datasetValue('mola_local_relief', relief),
+      roughnessProxy: {
+        value: relief.value,
+        unit: 'm',
+        evidenceKind: relief.value === null ? 'unavailable' : 'derived-proxy',
+        sourceName: 'MOLA 0.1° 3×3-cell elevation range',
+        sourceUrl: store.metadata.get('mola_local_relief')?.source_url,
+        coverage: relief.value === null ? 'none' : 'global',
+        confidence: relief.value === null ? 'unknown' : 'low',
+        resolution: '0.1° grid (~5.9 km at the equator); 3×3 cell neighborhood',
+        caveat: 'Broad topographic relief proxy only. It is not instrument-measured surface roughness and does not resolve rover-scale rocks or hazards.',
+      },
+      iceConsistency01m: {
+        ...datasetValue('swim_ci_0_1m', { value: ice, unit: store.metadata.get('swim_ci_0_1m')?.units ?? 'dimensionless consistency index' }),
+        confidence: ice === null ? 'unknown' : 'low',
+      },
       thermalInertia: { value: null, unit: 'J m⁻² K⁻¹ s⁻½', evidenceKind: 'unavailable', coverage: 'none', confidence: 'unknown', caveat: 'A numeric thermal-inertia raster is not included in the prepared backend grid.' },
       surfaceTemperature: null,
-      surfacePressurePa: { value: null, unit: 'Pa', evidenceKind: 'unavailable', coverage: 'none', confidence: 'unknown', caveat: 'No validated pressure grid is included.' },
+      surfacePressurePa: {
+        value: pressureEstimate === null ? null : Math.round(pressureEstimate * 10) / 10,
+        unit: 'Pa',
+        evidenceKind: pressureEstimate === null ? 'unavailable' : 'modeled-estimate',
+        sourceName: 'NASA Mars Fact Sheet mean pressure; hydrostatic CO₂ reference-atmosphere estimate',
+        sourceUrl: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html',
+        coverage: pressureEstimate === null ? 'none' : 'global',
+        confidence: pressureEstimate === null ? 'unknown' : 'low',
+        model: { equation: 'p(z) = 636 Pa × exp(−g₀ z / (RCO₂ Tref)); g₀=3.71 m/s², RCO₂=188.92 J/(kg·K), Tref=210 K', referenceElevationMeters: 0, referenceTemperatureKelvin: 210 },
+        caveat: 'Improved hydrostatic reference estimate using CO₂ gas constant and reference temperature with Mars gravity. Still not an MCD/local observation; omits latitude, seasonal CO₂ exchange, dust, local time and weather. NASA gives 636 Pa at mean radius with a roughly 400–870 Pa seasonal range, so treat this as low-confidence context.',
+      },
       dustOpacity: { value: null, unit: 'dimensionless', evidenceKind: 'unavailable', coverage: 'none', confidence: 'unknown', caveat: 'No validated dust-opacity grid is included.' },
       solarFlux: { value: null, unit: 'W/m²', evidenceKind: 'unavailable', coverage: 'none', confidence: 'unknown', caveat: 'The available solar model contains seasonal samples only at five named site anchors; it is not a coordinate-wide solar map.' },
+      seasonalSolarSamples: localSolarSamples.length ? {
+        evidenceKind: 'modeled-point-samples',
+        siteId: nearestSolarSite?.site.id,
+        siteName: nearestSolarSite?.site.name,
+        distanceFromAnchorKm: Number(nearestSolarSite?.distanceKm.toFixed(3)),
+        records: localSolarSamples,
+        sourceUrl: store.solar.source_url,
+        caveat: 'Seasonal MCD point samples at the named site anchor, not a measurement at the query coordinate or a coordinate-wide solar map. Noon flux is not daily energy or panel output.',
+      } : null,
       radiation: { value: null, unit: 'mSv/year', evidenceKind: 'unavailable', coverage: 'none', confidence: 'unknown', caveat: 'No validated global radiation grid is included; rover readings are local observations.' },
       resources,
       hazards,
-      unknowns: ['No validated local temperature, pressure, dust opacity, solar flux, or radiation value is available at this coordinate.'],
+      unknowns: [
+        'No validated local temperature, thermal inertia, atmospheric dust loading, or radiation value is available at this coordinate.',
+        ...(localSolarSamples.length ? [] : ['No coordinate-specific solar model value is available; seasonal samples exist only at the five named site anchors.']),
+        'Surface pressure is a low-confidence hydrostatic reference estimate, not an MCD result or local observation.',
+      ],
       updatedAt: new Date().toISOString(),
     })
   })
@@ -244,6 +293,21 @@ export function createApp(store = new MarsDataStore()) {
       response.json({
         routeId: `${input.variant}-${Date.now()}`,
         variant: input.variant,
+        destination: prospect
+          ? {
+              type: 'swim-cell',
+              lat: destination.lat,
+              lon: destination.lon,
+              label: 'Reachable SWIM consistency cell',
+              swimCi01m: Number(prospect.ci_0_1m),
+              straightLineDistanceKm: Number(prospect.distance_km),
+            }
+          : {
+              type: 'station',
+              lat: destination.lat,
+              lon: destination.lon,
+              label: 'Configured station',
+            },
         algorithm: 'A* over MOLA elevation, slope, and local-relief grid',
         coverage: 'terrain-sampled',
         points,
@@ -253,7 +317,7 @@ export function createApp(store = new MarsDataStore()) {
         descentMeters: null,
         maximumSlopeDegrees: route.path.reduce((maximum: number, point: { slope_degrees: number | null }) => Math.max(maximum, point.slope_degrees ?? 0), 0),
         waypoints,
-        assumptions: [`Constant planning speed of ${input.travelSpeedKmPerHour} km/h; no stops or energy limits included.`, ...(prospect ? [`Destination is the highest-ranked reachable nearby SWIM consistency cell (Ci ${Number(prospect.ci_0_1m).toFixed(2)}); this does not confirm water. Ci ≥ 0.3 is the published positive-indicator threshold.`] : [])],
+        assumptions: [`Constant planning speed of ${input.travelSpeedKmPerHour} km/h; no stops or energy limits included.`, ...(prospect ? [`Destination is the highest-ranked reachable SWIM consistency cell among the sampled candidates (Ci ${Number(prospect.ci_0_1m).toFixed(2)}); this does not confirm water. ${Number(prospect.ci_0_1m) >= 0.3 ? 'It meets' : 'It is below'} the published positive-indicator threshold of Ci 0.3.`] : [])],
         caveats: [route.caveat, 'This is an exploratory terrain-cost route, not a certified safe route. MOLA grid is roughly 5.9 km/cell at the equator.'],
       })
     } catch (error) {

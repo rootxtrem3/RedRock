@@ -44,6 +44,10 @@ test('API returns data-backed samples, bounded profiles, and SWIM candidates', a
     assert.equal(health.status, 'ok')
     assert.equal(health.site_count, 5)
 
+    const seasonalSolar = await fetch(`${baseUrl}/api/solar?site_id=jezero_crater`).then((response) => response.json()) as Record<string, any>
+    assert.equal(seasonalSolar.records.length, 4)
+    assert.ok(seasonalSolar.records.every((record: Record<string, any>) => typeof record.flux_horizontal_w_m2 === 'number'))
+
     const sample = await fetch(`${baseUrl}/api/sample?lat=18.38&lon=77.58`).then((response) => response.json()) as Record<string, any>
     assert.equal(sample.terrain.mola_elevation.status, 'sampled')
     assert.equal(sample.ice.status, 'sampled_consistency_index')
@@ -92,6 +96,8 @@ test('frontend analysis and route contracts return sampled values and computed p
     assert.equal(analysis.locationId, 'jezero')
     assert.equal(analysis.elevationMeters.evidenceKind, 'published-map')
     assert.equal(typeof analysis.elevationMeters.value, 'number')
+    assert.equal(typeof analysis.iceConsistency01m.value, 'number')
+    assert.equal(analysis.iceConsistency01m.unit, 'dimensionless consistency index')
     assert.equal(analysis.radiation.value, null)
     assert.equal(analysis.radiation.evidenceKind, 'unavailable')
     assert.ok(analysis.resources.length > 0)
@@ -110,6 +116,9 @@ test('frontend analysis and route contracts return sampled values and computed p
     assert.equal(routeResponse.status, 200)
     const route = await routeResponse.json() as Record<string, any>
     assert.equal(route.coverage, 'terrain-sampled')
+    assert.equal(route.destination.type, 'station')
+    assert.equal(route.destination.lat, request.end.lat)
+    assert.equal(route.destination.lon, request.end.lon)
     assert.ok(route.points.length > 1)
     assert.ok(route.waypoints.every((waypoint: Record<string, any>) => typeof waypoint.reason === 'string'))
 
@@ -121,6 +130,15 @@ test('frontend analysis and route contracts return sampled values and computed p
     assert.equal(resourceRoute.status, 200, await resourceRoute.clone().text())
     const resource = await resourceRoute.json() as Record<string, any>
     assert.ok(resource.assumptions.some((assumption: string) => assumption.includes('SWIM consistency cell')))
+    assert.equal(resource.destination.type, 'swim-cell')
+    assert.equal(typeof resource.destination.lat, 'number')
+    assert.equal(typeof resource.destination.lon, 'number')
+    assert.equal(typeof resource.destination.swimCi01m, 'number')
+    assert.equal(typeof resource.destination.straightLineDistanceKm, 'number')
+    assert.ok(resource.destination.lat !== request.end.lat || resource.destination.lon !== request.end.lon)
+    assert.equal(resource.points.at(-1).lat, resource.destination.lat)
+    assert.equal(resource.points.at(-1).lon, resource.destination.lon)
+    assert.ok(resource.assumptions.some((assumption: string) => assumption.includes('below the published positive-indicator threshold') || assumption.includes('meets the published positive-indicator threshold')))
   })
 })
 

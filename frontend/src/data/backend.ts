@@ -1,6 +1,9 @@
 export type EvidenceKind =
   | 'measured'
   | 'derived'
+  | 'derived-proxy'
+  | 'modeled-estimate'
+  | 'modeled-point-samples'
   | 'modeled'
   | 'published-map'
   | 'authored-scenario'
@@ -24,6 +27,8 @@ export type BackendLocationAnalysis = {
   elevationMeters?: BackendValue<number>
   slopeDegrees?: BackendValue<number>
   localReliefMeters?: BackendValue<number>
+  roughnessProxy?: BackendValue<number>
+  iceConsistency01m?: BackendValue<number>
   thermalInertia?: BackendValue<number>
   surfacePressurePa?: BackendValue<number>
   dustOpacity?: BackendValue<number>
@@ -40,6 +45,19 @@ export type BackendLocationAnalysis = {
     sourceUrl?: string
   } | null
   solarFlux?: BackendValue<number>
+  seasonalSolarSamples?: {
+    evidenceKind: 'modeled-point-samples'
+    siteId?: string
+    siteName?: string
+    distanceFromAnchorKm?: number
+    records: Array<{
+      season: string
+      flux_horizontal_w_m2: number
+      flux_local_slope_w_m2: number
+    }>
+    sourceUrl?: string
+    caveat?: string
+  } | null
   radiation?: BackendValue<number>
   resources?: Array<{
     name: string
@@ -58,6 +76,14 @@ export type BackendLocationAnalysis = {
 export type BackendRoutePlan = {
   routeId: string
   variant: 'recommended' | 'shorter' | 'resource'
+  destination?: {
+    type: 'station' | 'swim-cell'
+    lat: number
+    lon: number
+    label: string
+    swimCi01m?: number
+    straightLineDistanceKm?: number
+  }
   algorithm: string
   coverage: 'terrain-sampled' | 'geometry-only' | 'unavailable'
   points: Array<{
