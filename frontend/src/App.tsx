@@ -307,7 +307,7 @@ function App() {
             alt=""
             aria-hidden="true"
           />
-          <span className="brand-copy"><strong>RED-ROCK</strong><small>Mars operations</small></span>
+          <span className="brand-copy"><strong>REDROCK</strong><small>Mars operations</small></span>
         </button>
 
         <nav className="desktop-nav" aria-label="Primary navigation">
