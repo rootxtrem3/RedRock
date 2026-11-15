@@ -92,6 +92,13 @@ function App() {
     getTerrainPatch(selected?.id) ??
     (selected ? getTerrainPatchAt(selected.lat, selected.lon) : undefined)
   const activeLayer = LAYER_DEFINITIONS[layer]
+  const activePatchResolution = activeTerrainPatch
+    ? layer === 'day-temperature'
+      ? activeTerrainPatch.dayTemperatureResolutionMeters ?? activeTerrainPatch.imageryResolutionMeters
+      : layer === 'elevation'
+        ? activeTerrainPatch.elevationResolutionMeters
+        : activeTerrainPatch.imageryResolutionMeters
+    : undefined
 
   useEffect(() => {
     if (!selected) {
@@ -436,12 +443,18 @@ function App() {
         <span>N</span><i /><small>{selected ? 'TARGET' : 'ORBIT'}</small>
       </div>
 
-      {activeTerrainPatch && (layer === 'visual' || layer === 'elevation') && (
+      {activeTerrainPatch && (layer === 'visual' || layer === 'elevation' || layer === 'day-temperature') && (
         <div className="terrain-detail-indicator" aria-label="Local terrain resolution">
           <span />
           <div>
-            <small>Local terrain loaded</small>
-            <strong>{Math.round(activeTerrainPatch.imageryResolutionMeters)} m / pixel</strong>
+            <small>
+              {layer === 'day-temperature'
+                ? 'High-resolution THEMIS Day IR loaded'
+                : layer === 'elevation'
+                  ? 'High-resolution MOLA elevation loaded'
+                  : 'THEMIS Day IR detail over Viking basemap'}
+            </small>
+            <strong>{Math.round(activePatchResolution ?? activeTerrainPatch.imageryResolutionMeters)} m / pixel</strong>
           </div>
         </div>
       )}
@@ -476,20 +489,20 @@ function App() {
           <span />
           <strong>
             {activeTerrainPatch &&
-            (layer === 'visual' || layer === 'elevation') &&
+            (layer === 'visual' || layer === 'elevation' || layer === 'day-temperature') &&
             zoom >= 7
-              ? `THEMIS ${Math.round(activeTerrainPatch.imageryResolutionMeters)} M/PIX`
+              ? `${layer === 'elevation' ? 'MOLA' : 'THEMIS'} ${Math.round(activePatchResolution ?? activeTerrainPatch.imageryResolutionMeters)} M/PIX`
               : activeLayer.label.toUpperCase()}
           </strong>
           <small>
             {activeTerrainPatch &&
-            (layer === 'visual' || layer === 'elevation') &&
+            (layer === 'visual' || layer === 'elevation' || layer === 'day-temperature') &&
             zoom >= 7
-              ? 'LOCAL DETAIL'
+              ? 'REGIONAL SOURCE DETAIL'
               : activeLayer.note.toUpperCase()}
           </small>
         </div>
-        <div className="telemetry-source"><Database size={12} /><span>DATA</span><strong>MOLA / THEMIS / TES / CRISM</strong></div>
+        <div className="telemetry-source"><Database size={12} /><span>DATA</span><strong>MOLA / THEMIS / TES / SWIM</strong></div>
       </footer>
 
       <nav className="mobile-navigation" aria-label="Mobile navigation">

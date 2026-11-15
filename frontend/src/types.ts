@@ -50,6 +50,7 @@ export type LayerId =
   | 'roughness'
   | 'day-temperature'
   | 'thermal-inertia'
+  | 'ice-consistency'
   | 'hydrated-minerals'
   | 'hematite'
 

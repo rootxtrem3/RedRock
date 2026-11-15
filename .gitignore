@@ -1,5 +1,7 @@
 # Downloaded planetary source products are reproducible with the preparation script.
 data/mars/raw/
+backend/node_modules/
+backend/dist/
 
 # Python tooling
 __pycache__/

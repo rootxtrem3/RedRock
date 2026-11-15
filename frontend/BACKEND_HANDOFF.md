@@ -140,9 +140,10 @@ Do not overwrite the authored fallback site catalog silently. Prefer returning b
 
 - Global visual base: Viking-derived color mosaic at 8192×4096, approximately 2.6 km/pixel.
 - Global elevation/height: MOLA at 8192×4096, approximately 2.6 km/pixel. The mesh uses this height texture for displacement.
-- Five high-resolution detail regions: Jezero, Gale, Elysium, Olympus, and Valles. THEMIS patches are 1536×1536 over roughly 6°×6° (about 231 m/pixel); MOLA detail height/elevation is coarser. Detail patches activate on close zoom when the view or selected coordinates fall inside a prepared region.
-- Other available display products: THEMIS Day IR brightness, TES thermal inertia colorized product, MOLA roughness composite, TES sheet-silicate/high-silica-glass, and TES hematite. Colorized maps are not numeric rasters and must not be used to derive numeric abundance or temperature in the browser.
-- No bundled SWIM shallow-ice product or validated global radiation raster is currently available. The frontend should show unavailable/no-data states until the backend provides data and a matching raster/prospect endpoint. Do not present Curiosity site radiation as global coverage.
+- Five high-resolution detail regions: Jezero, Gale, Elysium, Olympus, and Valles. THEMIS context patches are 1536×1536 over roughly 6°×6° (~231.55 m/pixel); new ASU 100 m Day IR patches are used by the Day IR brightness layer. MOLA detail height/elevation is 128 ppd (~463.1 m/pixel). Detail patches activate when the view or selected coordinates fall inside a prepared region.
+- Bundled SWIM 4MIM 0–1 m consistency layer: native 7200×2400, 20 ppd (~2.96 km/pixel), covering 60°S–60°N. It preserves the -30 no-data sentinel and uses a transparent global texture outside the source's latitude range. Its values are signed consistency indicators, not probability or harvestable water.
+- Other available display products: TES thermal inertia (colorized, 20 ppd), MOLA roughness composite (8 ppd), TES sheet-silicate/high-silica-glass and hematite maps (4 ppd). Their textures remain at their published source resolution; the browser does not create finer measurements by resampling them. Colorized maps must not be used to derive numeric values.
+- No validated global radiation raster is bundled. Do not present Curiosity site radiation as global coverage; the backend may provide a separately labeled model estimate.
 
 The prepared global route grid is approximately 0.1° (about 5.93 km per cell at the equator). This is a broad planning grid and cannot certify local hazards or short-range rover safety. Keep the team’s November 3, 2026 cutoff for newly acquired datasets.
 
@@ -153,9 +154,10 @@ The prepared global route grid is approximately 0.1° (about 5.93 km per cell at
 - Survival-guide sections are tabs: Environment, Hazards, Resources, Travel, Equipment, and Emergency. Route planning is nested in Travel.
 - Small text in the global stylesheet has been raised to improve readability. Check narrow mobile layouts when adding dense metadata.
 
-## Integration follow-up
+## Integration status
 
-1. Implement the two JSON endpoints above (or agree on a changed contract and update `src/data/backend.ts` and this document together).
-2. Add validated numeric rasters and manifests for any new spatial layer before exposing it in the globe selector.
-3. Return explicit per-field no-data/provenance metadata; do not make the frontend infer scientific confidence from color or prose.
-4. Add API error and loading states for any new data request, retaining current null-safe fallback behavior.
+- `GET /api/analysis/location` and `POST /api/routes` now match the frontend fetch adapter. Start the API and frontend separately; set `VITE_API_BASE_URL` when they are hosted on different origins.
+- Analysis returns sampled MOLA elevation, slope, local relief, and SWIM consistency with provenance. Values without a validated numeric input (temperature, pressure, dust, solar flux at arbitrary coordinates, and radiation) are explicitly null/unavailable.
+- Route variants run against the prepared grid. `resource` selects the highest-ranked reachable nearby SWIM consistency cell; SWIM consistency does not establish water presence or extraction feasibility.
+- Keep API types and this handoff synchronized. Keep null/no-data distinct from zero, and include source, resolution, coverage, and caveats with spatial values.
+- The 0.1° route grid is exploratory planning only and cannot certify rover-scale safety.

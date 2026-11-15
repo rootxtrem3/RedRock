@@ -50,6 +50,7 @@ const DEFAULT_LAYER_OPACITY: Record<string, number> = {
   roughness: 0.78,
   'day-temperature': 0.74,
   'thermal-inertia': 0.74,
+  'ice-consistency': 0.9,
   'hydrated-minerals': 0.82,
 }
 
@@ -59,6 +60,7 @@ function layerMayUseAlpha(layerId: string) {
     id.includes('mineral') ||
     id.includes('thermal') ||
     id.includes('temperature') ||
+    id.includes('ice') ||
     id.includes('hematite')
   )
 }
