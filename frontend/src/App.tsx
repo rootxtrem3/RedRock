@@ -3,6 +3,7 @@ import {
   Database,
   Layers3,
   LocateFixed,
+  MapPin,
   Minus,
   Plus,
   RotateCcw,
@@ -77,6 +78,7 @@ function App() {
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [focusToken, setFocusToken] = useState(0)
   const [zoom, setZoom] = useState(5.1)
+  const [deviceLocationMessage, setDeviceLocationMessage] = useState('')
   const [cameraAction, setCameraAction] = useState<CameraAction>({ type: 'reset', nonce: 0 })
   const [routeBusy, setRouteBusy] = useState(false)
   const [routeVisible, setRouteVisible] = useState(false)
@@ -275,6 +277,7 @@ function App() {
   return (
     <main className={`app-shell ${guideOpen ? 'guide-active' : ''} ${routeVisible ? 'route-active' : ''}`}>
       <MarsGlobe
+        zoom={zoom}
         selected={selected}
         station={activeStation}
         cameraAction={cameraAction}
@@ -465,6 +468,18 @@ function App() {
         <button type="button" onClick={() => dispatchCamera('zoom-out')} aria-label="Zoom out"><Minus size={19} /></button>
         <button type="button" onClick={() => dispatchCamera('reset')} aria-label="Center Mars"><RotateCcw size={17} /></button>
         <button type="button" className={selected ? 'is-active' : ''} onClick={() => dispatchCamera('focus')} disabled={!selected} aria-label="Focus selected location"><LocateFixed size={18} /></button>
+        <button type="button" onClick={() => {
+          if (!navigator.geolocation) {
+            setDeviceLocationMessage('Device location is unavailable in this browser.')
+            return
+          }
+          setDeviceLocationMessage('Requesting device location…')
+          navigator.geolocation.getCurrentPosition(
+            ({ coords }) => setDeviceLocationMessage(`Device location: ${coords.latitude.toFixed(3)}°, ${coords.longitude.toFixed(3)}° (Earth only; no Mars beacon ranging)`),
+            (error) => setDeviceLocationMessage(error.code === error.PERMISSION_DENIED ? 'Location permission denied. This is Earth device GPS, not a Mars position.' : 'Could not get device location. This is Earth device GPS, not a Mars position.'),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
+          )
+        }} aria-label="Get this device’s Earth location" title="Uses this device’s GPS on Earth; it cannot locate a rover on Mars"><MapPin size={18} /></button>
         <button
           type="button"
           data-auto-rotate-toggle
@@ -478,6 +493,7 @@ function App() {
           disabled={reducedMotion}
         ><RotateCw size={17} /></button>
       </div>
+      {deviceLocationMessage && <div className="device-location-status" role="status">{deviceLocationMessage}</div>}
 
       <footer className="telemetry-bar">
         <div className="telemetry-primary">

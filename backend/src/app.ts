@@ -171,6 +171,17 @@ export function createApp(store = new MarsDataStore()) {
     const slope = sample.terrain.mola_slope
     const relief = sample.terrain.mola_local_relief
     const ice = sample.ice.ci_0_1m
+    // First-order reference-atmosphere estimate. MOLA elevation is relative to
+    // the areoid; this intentionally omits seasonal, diurnal, and weather effects.
+    const pressureEstimate = elevation.value === null
+      ? null
+      : 636 * Math.exp(-elevation.value / 11_000)
+    const nearestSolarSite = store.siteSamples
+      .map((site) => ({ site, distanceKm: distanceKm({ lat, lon_east: lon }, { lat: site.lat, lon_east: site.lon_east }) }))
+      .sort((a, b) => a.distanceKm - b.distanceKm)[0]
+    const localSolarSamples = nearestSolarSite && nearestSolarSite.distanceKm <= 1
+      ? store.solarBySite.get(nearestSolarSite.site.id) ?? []
+      : []
     const hazards = []
     if (slope.value !== null) hazards.push({ name: 'Slope', level: slope.value >= 15 ? 'high' : slope.value >= 8 ? 'medium' : 'low', evidence: { value: `${slope.value.toFixed(1)}° slope on a coarse MOLA grid`, unit: 'degrees', evidenceKind: 'published-map', sourceName: 'MOLA derived slope', coverage: 'global', confidence: 'moderate', resolution: '0.1° grid', caveat: 'Not a rover-scale hazard survey.' } })
     if (ice !== null) hazards.push({ name: 'Subsurface ice uncertainty', level: ice >= 0.3 ? 'medium' : 'unknown', evidence: { value: `SWIM consistency index ${ice.toFixed(3)}`, unit: 'dimensionless', evidenceKind: 'published-map', sourceName: 'NASA SWIM 4MIM 0–1 m', sourceUrl: 'https://swim.psi.edu/SWIM4MIMProducts.php', coverage: 'global', confidence: 'low', resolution: '20 ppd (~2.96 km/pixel)', caveat: 'Consistency is not confirmation of accessible water.' } })
@@ -180,19 +191,53 @@ export function createApp(store = new MarsDataStore()) {
       elevationMeters: datasetValue('mola_elevation', elevation),
       slopeDegrees: datasetValue('mola_slope', slope),
       localReliefMeters: datasetValue('mola_local_relief', relief),
+      roughnessProxy: {
+        value: relief.value,
+        unit: 'm',
+        evidenceKind: relief.value === null ? 'unavailable' : 'derived-proxy',
+        sourceName: 'MOLA 0.1° 3×3-cell elevation range',
+        sourceUrl: store.metadata.get('mola_local_relief')?.source_url,
+        coverage: relief.value === null ? 'none' : 'global',
+        confidence: relief.value === null ? 'unknown' : 'low',
+        resolution: '0.1° grid (~5.9 km at the equator); 3×3 cell neighborhood',
+        caveat: 'Broad topographic relief proxy only. It is not instrument-measured surface roughness and does not resolve rover-scale rocks or hazards.',
+      },
       iceConsistency01m: {
         ...datasetValue('swim_ci_0_1m', { value: ice, unit: store.metadata.get('swim_ci_0_1m')?.units ?? 'dimensionless consistency index' }),
         confidence: ice === null ? 'unknown' : 'low',
       },
       thermalInertia: { value: null, unit: 'J m⁻² K⁻¹ s⁻½', evidenceKind: 'unavailable', coverage: 'none', confidence: 'unknown', caveat: 'A numeric thermal-inertia raster is not included in the prepared backend grid.' },
       surfaceTemperature: null,
-      surfacePressurePa: { value: null, unit: 'Pa', evidenceKind: 'unavailable', coverage: 'none', confidence: 'unknown', caveat: 'No validated pressure grid is included.' },
+      surfacePressurePa: {
+        value: pressureEstimate === null ? null : Math.round(pressureEstimate * 10) / 10,
+        unit: 'Pa',
+        evidenceKind: pressureEstimate === null ? 'unavailable' : 'modeled-estimate',
+        sourceName: 'NASA Mars Fact Sheet mean surface pressure and scale height; exponential reference-atmosphere approximation',
+        sourceUrl: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html',
+        coverage: pressureEstimate === null ? 'none' : 'global',
+        confidence: pressureEstimate === null ? 'unknown' : 'low',
+        model: { equation: 'p(z) = 636 Pa × exp(−z / 11000 m)', referenceElevationMeters: 0, scaleHeightMeters: 11000 },
+        caveat: 'Climatological first-order estimate from MOLA elevation, not a local measurement or Mars GCM output. Omits seasonal CO₂ frost exchange, dust, latitude, local time, and weather; NASA reports mean-radius pressure varies seasonally (about 400–870 Pa).',
+      },
       dustOpacity: { value: null, unit: 'dimensionless', evidenceKind: 'unavailable', coverage: 'none', confidence: 'unknown', caveat: 'No validated dust-opacity grid is included.' },
       solarFlux: { value: null, unit: 'W/m²', evidenceKind: 'unavailable', coverage: 'none', confidence: 'unknown', caveat: 'The available solar model contains seasonal samples only at five named site anchors; it is not a coordinate-wide solar map.' },
+      seasonalSolarSamples: localSolarSamples.length ? {
+        evidenceKind: 'modeled-point-samples',
+        siteId: nearestSolarSite?.site.id,
+        siteName: nearestSolarSite?.site.name,
+        distanceFromAnchorKm: Number(nearestSolarSite?.distanceKm.toFixed(3)),
+        records: localSolarSamples,
+        sourceUrl: store.solar.source_url,
+        caveat: 'Seasonal MCD point samples at the named site anchor, not a measurement at the query coordinate or a coordinate-wide solar map. Noon flux is not daily energy or panel output.',
+      } : null,
       radiation: { value: null, unit: 'mSv/year', evidenceKind: 'unavailable', coverage: 'none', confidence: 'unknown', caveat: 'No validated global radiation grid is included; rover readings are local observations.' },
       resources,
       hazards,
-      unknowns: ['No validated local temperature, pressure, dust opacity, solar flux, or radiation value is available at this coordinate.'],
+      unknowns: [
+        'No validated local temperature, thermal inertia, dust opacity, or radiation value is available at this coordinate.',
+        ...(localSolarSamples.length ? [] : ['No coordinate-specific solar model value is available; seasonal samples exist only at the five named site anchors.']),
+        'Surface pressure is a low-confidence reference-atmosphere estimate, not a local observation.',
+      ],
       updatedAt: new Date().toISOString(),
     })
   })

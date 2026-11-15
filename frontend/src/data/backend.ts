@@ -1,6 +1,9 @@
 export type EvidenceKind =
   | 'measured'
   | 'derived'
+  | 'derived-proxy'
+  | 'modeled-estimate'
+  | 'modeled-point-samples'
   | 'modeled'
   | 'published-map'
   | 'authored-scenario'
@@ -24,6 +27,7 @@ export type BackendLocationAnalysis = {
   elevationMeters?: BackendValue<number>
   slopeDegrees?: BackendValue<number>
   localReliefMeters?: BackendValue<number>
+  roughnessProxy?: BackendValue<number>
   iceConsistency01m?: BackendValue<number>
   thermalInertia?: BackendValue<number>
   surfacePressurePa?: BackendValue<number>
@@ -41,6 +45,19 @@ export type BackendLocationAnalysis = {
     sourceUrl?: string
   } | null
   solarFlux?: BackendValue<number>
+  seasonalSolarSamples?: {
+    evidenceKind: 'modeled-point-samples'
+    siteId?: string
+    siteName?: string
+    distanceFromAnchorKm?: number
+    records: Array<{
+      season: string
+      flux_horizontal_w_m2: number
+      flux_local_slope_w_m2: number
+    }>
+    sourceUrl?: string
+    caveat?: string
+  } | null
   radiation?: BackendValue<number>
   resources?: Array<{
     name: string

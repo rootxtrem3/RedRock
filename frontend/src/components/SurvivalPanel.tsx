@@ -289,7 +289,7 @@ export function SurvivalPanel({
                     onClick={() => onRouteVariant(route.id)}
                   >
                     <span className="route-option-radio">{routeVariant === route.id && <i />}</span>
-                    <span className="route-option-copy"><em>{route.label}</em><small>Recalculate with backend</small></span>
+                    <span className="route-option-copy"><em>{route.label}</em><small>{routeVariant === route.id ? 'Current plan' : 'Calculate this route'}</small></span>
                   </button>
                 ))}
               </div>

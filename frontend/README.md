@@ -15,11 +15,12 @@ npm run dev
 Then start the frontend in a second terminal:
 
 ```bash
+cp .env.example .env.local
 npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite. Its `/api` requests are proxied to `http://127.0.0.1:8000` by default, including when Vite selects a different frontend port. Set `RED_ROCK_API_PROXY_TARGET` if the API listens elsewhere. For a separately hosted API, set `VITE_API_BASE_URL` to its origin and configure that API's CORS allowlist.
+Open the local URL printed by Vite. The example `.env.local` sends Vite's `/api` proxy to `VITE_API_PROXY_TARGET`; change that value if the local backend uses another port. This proxy setting is development-only and is not shipped to browser code. For Vercel, configure `VITE_API_BASE_URL` in the frontend project's environment settings with the deployed backend origin (for example, `https://your-api.vercel.app`, without a trailing slash). The frontend calls that origin directly, so allow the deployed frontend origin in the backend's CORS settings. Keep `VITE_API_BASE_URL` blank when serving frontend and API from the same origin.
 
 ## Validation
 
