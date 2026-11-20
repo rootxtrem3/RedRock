@@ -1,4 +1,4 @@
-import { createApp } from './app.js'
+import { createApp } from './createApp.js'
 import { MarsDataStore } from './data/marsData.js'
 
 const host = process.env.RED_ROCK_HOST ?? '127.0.0.1'

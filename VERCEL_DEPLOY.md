@@ -5,7 +5,7 @@ The repository deploys as one Vercel project with two independently built servic
 ## Services
 
 - `frontend` uses `frontend/`, the Vite preset, and `frontend/dist` as its output.
-- `backend` uses `backend/`, the Express preset, and `backend/index.ts` as its function entrypoint. Its prepared science grids are included from `backend/data/mars/processed/`.
+- `backend` uses `backend/`, the Express preset, and `backend/index.js` as its function entrypoint. Its prepared science grids are included from `backend/data/mars/processed/`.
 
 Both services are public only through the project-level rewrite table. The backend receives the original `/api/...` path, which matches its Express routes.
 

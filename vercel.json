@@ -11,6 +11,10 @@
         "index.js": {
           "includeFiles": "data/mars/processed/**",
           "maxDuration": 30
+        },
+        "dist/index.js": {
+          "includeFiles": "data/mars/processed/**",
+          "maxDuration": 30
         }
       }
     },

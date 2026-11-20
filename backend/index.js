@@ -4,7 +4,7 @@
 // time, and that transform did not preserve `export default` / `export =`
 // through to the deployed module.
 const express = require('express')
-const { createApp } = require('./dist/app.js')
+const { createApp } = require('./dist/createApp.js')
 const { MarsDataStore } = require('./dist/data/marsData.js')
 
 const app = express()
@@ -16,4 +16,4 @@ const handler = (request, response) => app(request, response)
 handler.default = handler
 module.exports = handler
 
-console.log('[red-rock-api] request handler initialized')
+console.log('[red-rock-api] root entry initialized')
