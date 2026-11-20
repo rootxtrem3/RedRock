@@ -2,7 +2,7 @@
   "name": "red-rock-backend",
   "private": true,
   "version": "1.0.0",
-  "type": "module",
+  "type": "commonjs",
   "engines": {
     "node": ">=22"
   },

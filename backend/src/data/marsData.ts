@@ -1,11 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-import { dirname, resolve } from 'node:path'
+import { resolve } from 'node:path'
 import { NpyGrid, type NpyKind } from './npyGrid.js'
 
 const sourceDirectoryCandidates = [
   resolve(process.cwd(), 'data/mars/processed'),
-  resolve(dirname(fileURLToPath(import.meta.url)), '../../../data/mars/processed'),
+  resolve(__dirname, '../../../data/mars/processed'),
 ]
 
 export type DatasetMetadata = {
