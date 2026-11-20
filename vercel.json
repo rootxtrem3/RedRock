@@ -2,10 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "services": {
     "backend": {
-      "root": "backend",
+      "root": "backend/",
       "framework": "express",
       "entrypoint": "index.ts",
-      "installCommand": "npm ci",
+      "installCommand": "npm ci --prefix ..",
       "buildCommand": "npm run build",
       "functions": {
         "index.ts": {
@@ -15,9 +15,9 @@
       }
     },
     "frontend": {
-      "root": "frontend",
+      "root": "frontend/",
       "framework": "vite",
-      "installCommand": "npm ci",
+      "installCommand": "npm ci --prefix ..",
       "buildCommand": "npm run build",
       "outputDirectory": "dist"
     }

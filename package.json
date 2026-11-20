@@ -1,0 +1,12 @@
+{
+  "name": "red-rock",
+  "private": true,
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "backend",
+    "frontend"
+  ]
+}

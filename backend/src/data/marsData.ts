@@ -4,7 +4,7 @@ import { NpyGrid, type NpyKind } from './npyGrid.js'
 
 const sourceDirectoryCandidates = [
   resolve(process.cwd(), 'data/mars/processed'),
-  resolve(__dirname, '../../../data/mars/processed'),
+  resolve(__dirname, '../../data/mars/processed'),
 ]
 
 export type DatasetMetadata = {
