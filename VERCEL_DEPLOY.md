@@ -1,21 +1,33 @@
 # Deploy RED ROCK on Vercel
 
-The repository has separate `frontend` and `backend` apps. Import the same GitHub repository twice in Vercel and set a different Root Directory for each project.
+The repository deploys as one Vercel project with two independently built services. The root [`vercel.json`](./vercel.json) sends `/api/*` to the Express backend and all other public requests to the Vite frontend.
 
-## Backend project
+## Services
 
-1. Import `rootxtrem3/Red-Rock` and set **Root Directory** to `backend`.
-2. Keep the framework preset on **Other** (or allow Express detection), Build Command `npm run build`, and Node.js version **22.x**. Do not set a custom output directory or start command.
-3. Add `RED_ROCK_CORS_ORIGINS` with the exact frontend production origin, for example `https://red-rock-frontend.vercel.app`. Add any frontend preview origin you intend to use, comma separated.
-4. Deploy. Open `https://<backend-project>.vercel.app/api/health`; it should return JSON with `status: "ok"` and loaded datasets.
+- `frontend` uses `frontend/`, the Vite preset, and `frontend/dist` as its output.
+- `backend` uses `backend/`, the Express preset, and `backend/index.ts` as its function entrypoint. Its prepared science grids are included from `backend/data/mars/processed/`.
 
-The backend project contains its required processed science grids under `backend/data/mars/processed`; `backend/vercel.json` bundles them with the Express function.
+Both services are public only through the project-level rewrite table. The backend receives the original `/api/...` path, which matches its Express routes.
 
-## Frontend project
+## Deploy
 
-1. Import the same GitHub repository again and set **Root Directory** to `frontend`.
-2. Use the **Vite** preset, Build Command `npm run build`, and Output Directory `dist`.
-3. Set `VITE_API_BASE_URL` to the backend project origin, for example `https://red-rock-backend.vercel.app` (no trailing slash). Add it for Production and Preview, then redeploy.
-4. Open the frontend deployment and try a site selection, a map sample, and a route request. If the API is blocked, add the exact frontend origin to the backend's `RED_ROCK_CORS_ORIGINS` and redeploy the backend.
+1. Import `rootxtrem3/Red-Rock` once and leave the Vercel project's **Root Directory** at the repository root.
+2. Do not add `VITE_API_BASE_URL`; a blank value makes browser requests use the deployment's same-origin `/api` route.
+3. Deploy, then open `/api/health`. It should return JSON with `status: "ok"` and the loaded datasets.
+4. Open `/` and verify location analysis, seasonal solar data, and route planning.
 
-Vercel's Git integration deploys connected projects when the selected branch receives a push. Use the feature branch deployment first; promote or merge to the production branch only after review.
+Same-origin production requests do not require CORS configuration. `RED_ROCK_CORS_ORIGINS` remains available only for an intentionally separate browser origin.
+
+## Service bindings
+
+There are no service bindings in this deployment. The caller is static Vite code running in the user's browser, not a frontend function, so it cannot read runtime binding variables. Public same-origin `/api` routing is the correct connection. Do not set a generated binding variable manually.
+
+## Local services development
+
+Run both services through the same routing table:
+
+```bash
+npx vercel@latest dev --local
+```
+
+For standalone development, continue to run the backend and Vite separately. Copy `frontend/.env.example` to `frontend/.env.local`; Vite proxies `/api` to `VITE_API_PROXY_TARGET`.

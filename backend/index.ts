@@ -1,7 +1,10 @@
+import express from 'express'
 import { createApp } from './src/app.js'
 import { MarsDataStore } from './src/data/marsData.js'
 
-// Vercel serves this Express app as a serverless function.
-const app = createApp(new MarsDataStore())
+// Keep the direct Express import in this recognized entrypoint. Vercel's
+// Express adapter scans entrypoint files for it before loading the handler.
+const app = express()
+app.use(createApp(new MarsDataStore()))
 
 export default app

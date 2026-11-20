@@ -20,7 +20,7 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite. The example `.env.local` sends Vite's `/api` proxy to `VITE_API_PROXY_TARGET`; change that value if the local backend uses another port. This proxy setting is development-only and is not shipped to browser code. For Vercel, configure `VITE_API_BASE_URL` in the frontend project's environment settings with the deployed backend origin (for example, `https://your-api.vercel.app`, without a trailing slash). The frontend calls that origin directly, so allow the deployed frontend origin in the backend's CORS settings. Keep `VITE_API_BASE_URL` blank when serving frontend and API from the same origin.
+Open the local URL printed by Vite. The example `.env.local` sends Vite's `/api` proxy to `VITE_API_PROXY_TARGET`; change that value if the local backend uses another port. This proxy setting is development-only and is not shipped to browser code. The root Vercel Services deployment also uses same-origin `/api`, so leave `VITE_API_BASE_URL` blank in Vercel. Set it only when intentionally hosting the API on another origin, and configure backend CORS for that origin.
 
 ## Validation
 

@@ -27,6 +27,7 @@ frontend-session.log
 brag-output-*/
 frontend/src/data/backend.local-source.ts
 frontend/public/terrain/patches/patches/
+.vercel/
 
 # Python tooling
 __pycache__/

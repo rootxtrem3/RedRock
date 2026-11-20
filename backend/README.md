@@ -45,7 +45,7 @@ Location analysis also returns `roughnessProxy`, which is the MOLA 3×3-cell ele
 
 ## Frontend integration
 
-The Vite client reads `VITE_API_BASE_URL` from `frontend/.env`; leave it empty for a same-origin reverse proxy. During local development, the backend permits `http://localhost:5173` and `http://127.0.0.1:5173`. See [`frontend/BACKEND_HANDOFF.md`](../frontend/BACKEND_HANDOFF.md) for the response contract and UI mapping.
+The root Vercel Services configuration publishes this service at same-origin `/api/*`; the public path is preserved and already matches the Express routes above. Leave `VITE_API_BASE_URL` empty for that deployment. No service binding is used because requests originate in the user's browser rather than a server-side frontend function. During standalone local development, the backend permits `http://localhost:5173` and `http://127.0.0.1:5173`. See [`frontend/BACKEND_HANDOFF.md`](../frontend/BACKEND_HANDOFF.md) for the response contract and UI mapping.
 
 ## Development checks
 

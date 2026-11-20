@@ -10,7 +10,7 @@ npm install
 npm run dev
 ```
 
-Copy `.env.example` to `.env.local` and set `VITE_API_BASE_URL` to the backend origin when the API is hosted separately. Leave it blank when the API is served from the same origin. The API must allow the frontend origin through CORS when hosted separately. Production build: `npm run build`.
+Copy `.env.example` to `.env.local` for standalone development. The root Vercel Services deployment serves the API from same-origin `/api`, so leave `VITE_API_BASE_URL` blank. Set it only when the API is intentionally hosted on another origin; that origin must allow the frontend through CORS. Production build: `npm run build`.
 
 ## Frontend structure
 
@@ -156,7 +156,7 @@ The prepared global route grid is approximately 0.1° (about 5.93 km per cell at
 
 ## Integration status
 
-- `GET /api/analysis/location` and `POST /api/routes` now match the frontend fetch adapter. Start the API and frontend separately; set `VITE_API_BASE_URL` when they are hosted on different origins.
+- `GET /api/analysis/location` and `POST /api/routes` match the frontend fetch adapter and the root Vercel `/api/*` service rewrite. For standalone development, start the API and frontend separately; set `VITE_API_BASE_URL` only when they are hosted on different origins.
 - Analysis returns sampled MOLA elevation, slope, local relief, and SWIM consistency with provenance. Values without a validated numeric input (temperature, pressure, dust, solar flux at arbitrary coordinates, and radiation) are explicitly null/unavailable.
 - Route variants run against the prepared grid. `resource` selects the highest-ranked reachable nearby SWIM consistency cell; SWIM consistency does not establish water presence or extraction feasibility.
 - Keep API types and this handoff synchronized. Keep null/no-data distinct from zero, and include source, resolution, coverage, and caveats with spatial values.
