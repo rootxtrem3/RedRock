@@ -4,11 +4,11 @@
     "backend": {
       "root": "backend/",
       "framework": "express",
-      "entrypoint": "index.ts",
+      "entrypoint": "index.js",
       "installCommand": "npm ci --prefix ..",
       "buildCommand": "npm run build",
       "functions": {
-        "index.ts": {
+        "index.js": {
           "includeFiles": "data/mars/processed/**",
           "maxDuration": 30
         }
