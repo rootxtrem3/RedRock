@@ -1,3 +1,4 @@
+import type { RequestListener } from 'node:http'
 import express from 'express'
 import { createApp } from './src/app.js'
 import { MarsDataStore } from './src/data/marsData.js'
@@ -7,8 +8,12 @@ import { MarsDataStore } from './src/data/marsData.js'
 const app = express()
 app.use(createApp(new MarsDataStore()))
 
-// Vercel's function runtime imports this file and requires the module's
-// default export to be the handler. `export =` compiles to
-// `module.exports = app`, so both `require()` and `import()` see the Express
-// app directly; `export default` would produce a nested `{ default: app }`.
-export = app
+// Vercel imports this module and needs a callable request handler. Exporting
+// the Express app directly is ambiguous because an Express app also exposes
+// `listen()`, which some launchers mistake for an `http.Server`. A plain
+// request listener takes the function branch in every launcher variant.
+// `export =` compiles to `module.exports = handler`, so `import()` resolves to
+// the function itself instead of a nested `{ default: handler }`.
+const handler: RequestListener = (request, response) => app(request, response)
+
+export = handler
